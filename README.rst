@@ -38,6 +38,32 @@ Prerequisites
 - Rust and wasm-pack (for RST processing)
 - Python 3.9+ (for math rendering)
 
+Installing Rust
+~~~~~~~~~~~~~~~
+
+1. Install Rust using rustup (recommended)::
+
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    source ~/.cargo/env
+
+2. Verify installation::
+
+    rustc --version
+    cargo --version
+
+Installing wasm-pack
+~~~~~~~~~~~~~~~~~~~
+
+1. Install wasm-pack::
+
+    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+2. Verify installation::
+
+    wasm-pack --version
+
+Note: The Rust and wasm-pack tools are used for compiling the RST parser to WebAssembly, which provides 10-20x faster processing compared to JavaScript alternatives.
+
 Installation
 ~~~~~~~~~~~~
 
