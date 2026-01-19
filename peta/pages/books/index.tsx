@@ -30,13 +30,33 @@ export default function Books() {
     const [loadedSections, setLoadedSections] = useState<Set<string>>(new Set());
       const router = useRouter();
   useEffect(() => {
-    loadBooksContent();
+    // Check for book parameter in URL on initial load
+    const urlParams = new URLSearchParams(window.location.search);
+    const bookId = urlParams.get('book');
+    
+    if (bookId) {
+      console.log('Found book ID in URL:', bookId);
+      // Load books first, then select the book
+      loadBooksContent().then((booksData) => {
+        console.log('Loaded books:', booksData.map(b => b.id));
+        const book = booksData.find(b => b.id === bookId);
+        console.log('Found matching book:', book);
+        if (book) {
+          console.log('Setting selected book:', book.title);
+          setSelectedBook(book);
+          setShowTOC(true);
+        } else {
+          console.log('Book not found with ID:', bookId);
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {
-    // Reset selected book when the route changes
+    // Reset selected book only when navigating to the main books page without parameters
     const handleRouteChange = (url: string) => {
       if (url === '/books' || url === '/books?') {
+        console.log('Route change detected, clearing selected book');
         setSelectedBook(null);
         setSelectedTag('');
         setShowTOC(false);
@@ -50,9 +70,13 @@ export default function Books() {
     };
   }, [router]);
 
-  // Also check on mount
+  // Check on mount - but don't clear if there's a book parameter
   useEffect(() => {
-    if (router.asPath === '/books' || router.asPath === '/books?') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasBookParam = urlParams.has('book');
+    
+    if (!hasBookParam && (router.asPath === '/books' || router.asPath === '/books?')) {
+      console.log('No book parameter, clearing state');
       setSelectedBook(null);
       setSelectedTag('');
       setShowTOC(false);
@@ -62,6 +86,7 @@ export default function Books() {
   useEffect(() => {
     // When a tag is selected, clear the selected book
     if (selectedTag) {
+      console.log('Tag selected, clearing selected book:', selectedTag);
       setSelectedBook(null);
       setShowTOC(false);
       const url = `/books?tag=${encodeURIComponent(selectedTag)}`;
@@ -133,8 +158,10 @@ useEffect(() => {
       
       setBooks(booksData);
       setTags(tagsData);
+      return booksData; // Return books for immediate use
     } catch (error) {
       console.error('Error loading books:', error);
+      return [];
     } finally {
       setLoading(false);
     }
