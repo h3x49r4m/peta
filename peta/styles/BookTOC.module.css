@@ -1,27 +1,26 @@
 .bookTOC {
   position: fixed;
-  top: 100px;
+  top: 50%;
   right: 20px;
-  width: 40px;
-  height: 40px;
-  z-index: 1000;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  z-index: 999;
   transition: all 0.3s ease;
 }
 
 .bookTOC.expanded {
-  width: 250px;
+  width: auto;
   height: fit-content;
   max-height: calc(100vh - 120px);
-  top: 80px;
-  right: 20px;
 }
 
 .tocIcon {
   background: rgba(0, 0, 0, 0.05);
   border: none;
   border-radius: 8px;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -42,7 +41,19 @@
   padding: 1rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
-  margin-top: 0.5rem;
+  margin-right: 0.5rem;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.bookTOC.expanded .tocPanel {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
 }
 
 .tocHeader {
@@ -56,11 +67,10 @@
 
 .tocTitle {
   font-size: 0.9rem;
-  font-weight: 300;
+  font-weight: 400;
   margin: 0;
   color: #666;
   flex: 1;
-  letter-spacing: 0.5px;
 }
 
 .tocList {
@@ -79,9 +89,8 @@
   display: block;
   padding: 0.25rem 0;
   transition: all 0.2s ease;
-  font-weight: 300;
-  font-size: 0.85rem;
-  letter-spacing: 0.25px;
+  font-weight: 400;
+  font-size: 0.875rem;
 }
 
 .tocLink:hover {
@@ -109,7 +118,7 @@
 /* Responsive styles */
 @media (max-width: 768px) {
   .bookTOC {
-    top: 80px;
+    bottom: 70px;
     right: 10px;
   }
   
@@ -117,17 +126,19 @@
     width: calc(100vw - 40px);
     right: 10px;
     left: 10px;
+    bottom: 70px;
   }
   
   .tocPanel {
     padding: 0.75rem;
+    max-height: calc(100vh - 140px);
   }
   
   .tocTitle {
-    font-size: 0.85rem;
+    font-size: 0.875rem;
   }
   
   .tocLink {
-    font-size: 0.8rem;
+    font-size: 0.875rem;
   }
 }

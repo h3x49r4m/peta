@@ -90,18 +90,6 @@ export default function BookTOC({ book }: BookTOCProps) {
 
   return (
     <div className={`${styles.bookTOC} ${isExpanded ? styles.expanded : ''}`}>
-      <button 
-        className={styles.tocIcon}
-        onClick={() => setIsExpanded(!isExpanded)}
-        aria-label={isExpanded ? 'Hide TOC' : 'Show TOC'}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-      </button>
-      
       {isExpanded && (
         <div className={styles.tocPanel}>
           <div className={styles.tocHeader}>
@@ -129,6 +117,18 @@ export default function BookTOC({ book }: BookTOCProps) {
           </ul>
         </div>
       )}
+      
+      <button 
+        className={styles.tocIcon}
+        onClick={() => setIsExpanded(!isExpanded)}
+        aria-label={isExpanded ? 'Hide TOC' : 'Show TOC'}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
     </div>
   );
 }
