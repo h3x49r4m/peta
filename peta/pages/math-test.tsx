@@ -45,17 +45,17 @@ export default function MathTest() {
       <p>The derivative of a function $f(x)$ with respect to $x$ is defined as:</p>
       
       <h2>Display Math</h2>
-      <p>$$f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}$$</p>
+      <p>{`$$f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}$$`}</p>
       
       <h2>Another Example</h2>
       <p>The integral is the inverse operation of differentiation. The definite integral is defined as:</p>
       
-      <p>$$\int_a^b f(x) dx = \lim_{n \to \infty} \sum_{i=1}^{n} f(x_i^*) \Delta x$$</p>
+      <p>{`$$\\int_a^b f(x) dx = \\lim_{n \\to \\infty} \\sum_{i=1}^{n} f(x_i^*) \\Delta x$$`}</p>
       
       <h2>LaTeX-style delimiters</h2>
-      <p>This should also work: \[E = mc^2\]</p>
+      <p>This should also work: {`\\[E = mc^2\\]`}</p>
       
-      <p>And inline: \(E = mc^2\)</p>
+      <p>And inline: {`\\(E = mc^2\\)`}</p>
       
       <style jsx>{`
         h1, h2 {
@@ -71,16 +71,4 @@ export default function MathTest() {
   );
 }
 
-// Add type declarations for KaTeX
-declare global {
-  interface Window {
-    katex?: any;
-    renderMathInElement?: (
-      element: HTMLElement,
-      options?: {
-        delimiters?: Array<{ left: string; right: string; display: boolean }>;
-        throwOnError?: boolean;
-      }
-    ) => void;
-  }
-}
+// Type declarations for KaTeX are in _app.tsx

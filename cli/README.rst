@@ -12,7 +12,7 @@ Add the tools directory to your PATH for easy access::
     export PATH="$PATH:/path/to/peta/tools"
 
     # Or create a symlink in a directory that's already in your PATH
-    ln -s /path/to/peta/tools/peta /usr/local/bin/peta
+    ln -s /path/to/peta/cli/peta /usr/local/bin/peta
 
 Usage
 -----
@@ -47,7 +47,7 @@ Direct Node.js Usage
 
 You can also use the init script directly::
 
-    node tools/init.js article "My Article Title"
+    node cli/init.js article "My Article Title"
 
 Content Types
 -------------
@@ -95,4 +95,4 @@ Each content type uses a template with:
 - RST formatting for content
 - Helpful comments and examples
 
-You can customize the templates by editing ``tools/init.js``.
+You can customize the templates by editing ``cli/init.js``.

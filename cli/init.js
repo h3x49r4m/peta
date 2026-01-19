@@ -115,8 +115,8 @@ function createContentFile(type, title) {
   
   if (!title) {
     console.error('Error: Title is required');
-    console.log('Usage: node tools/init.js <type> "<title>"');
-    console.log('Example: node tools/init.js article "My First Article"');
+    console.log('Usage: node cli/init.js <type> "<title>"');
+    console.log('Example: node cli/init.js article "My First Article"');
     process.exit(1);
   }
   
@@ -173,10 +173,9 @@ if (args.length < 2) {
   });
   console.log('');
   console.log('Examples:');
-  console.log('  node tools/init.js article "My First Article"');
-  console.log('  node tools/init.js snippet "Useful Code Snippet"');
-  console.log('  node tools/init.js project "My Awesome Project"');
-  process.exit(0);
+  console.log('  node cli/init.js article "My First Article"');
+      console.log('  node cli/init.js snippet "Useful Code Snippet"');
+      console.log('  node cli/init.js project "My Awesome Project"');  process.exit(0);
 }
 
 const [type, ...titleArgs] = args;

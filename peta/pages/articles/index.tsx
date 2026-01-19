@@ -124,7 +124,7 @@ export default function Articles() {
       : posts
     : [];
 
-  const handlePostClick = (post: ArticlePost) => {
+  const handlePostClick = (post: ArticlePost | any) => {
     setSelectedPost(post);
     setShowTOC(false); // Reset TOC visibility
     // Update the URL without navigating
@@ -285,7 +285,7 @@ export default function Articles() {
       } else if (item.type === 'snippet-card-ref') {
         // Add a placeholder for the snippet with a proper title
         const snippetId = item.content;
-        const snippetTitle = snippetId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const snippetTitle = snippetId.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
         
         elements.push(`<div class="${styles.snippetCard}" id="snippet-${snippetId}">
           <div class="${styles.snippetHeader}">
@@ -304,7 +304,7 @@ export default function Articles() {
           
           // Debug: Log all snippets for inspection
           console.log('Looking for snippet:', snippetId);
-          console.log('Available snippets:', snippets.map(s => ({
+          console.log('Available snippets:', snippets.map((s: any) => ({
             id: s.id || 'no-id',
             title: s.frontmatter?.title || s.title || 'no-title',
             snippet_id: s.frontmatter?.snippet_id || 'no-snippet_id'

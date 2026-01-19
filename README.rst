@@ -146,16 +146,16 @@ Math is rendered to SVG during build time for optimal performance.
 CLI Tools
 ---------
 
-The Peta CLI provides convenient commands for managing content. For detailed documentation, see ``tools/README.rst``.
+The Peta CLI provides convenient commands for managing content. For detailed documentation, see ``cli/README.rst``.
 
 Creating Content
 ~~~~~~~~~~~~~~~~
 
 Create new content files with templates::
 
-    ./tools/peta init article "Article Title"
-    ./tools/peta init snippet "Snippet Title"
-    ./tools/peta init project "Project Title"
+    ./cli/peta init article "Article Title"
+    ./cli/peta init snippet "Snippet Title"
+    ./cli/peta init project "Project Title"
 
 Content files are automatically created in the appropriate ``_content/`` directory with:
 - Proper RST formatting
@@ -320,7 +320,7 @@ Contributing
 For more information, see:
 
 - Architecture documentation in ``docs/architecture.rst``
-- CLI tools documentation in ``tools/README.rst``
+- CLI tools documentation in ``cli/README.rst``
 
 License
 -------

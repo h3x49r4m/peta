@@ -96,7 +96,7 @@ export default function Projects() {
     ? projects.filter(project => project.tags.includes(selectedTag))
     : projects;
 
-  const handleProjectClick = (project: Project) => {
+  const handleProjectClick = (project: Project | any) => {
     setSelectedProject(project);
     setIsModalOpen(true);
   };

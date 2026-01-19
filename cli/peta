@@ -79,6 +79,8 @@ init_content() {
 start_dev() {
     cd "$PROJECT_ROOT/peta"
     if [ -f "package.json" ]; then
+        print_info "Processing content..."
+        node scripts/process-content.js
         print_info "Starting development server..."
         npm run dev
     else

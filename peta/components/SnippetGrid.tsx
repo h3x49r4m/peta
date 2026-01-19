@@ -15,7 +15,10 @@ interface SnippetGridProps {
 }
 
 export default function SnippetGrid({ snippets, onSnippetClick }: SnippetGridProps) {
-  if (snippets.length === 0) {
+  // Ensure snippets is always an array
+  const snippetsArray = Array.isArray(snippets) ? snippets : [];
+  
+  if (snippetsArray.length === 0) {
     return (
       <div className={styles.empty}>
         <p>No snippets found.</p>
@@ -53,7 +56,7 @@ export default function SnippetGrid({ snippets, onSnippetClick }: SnippetGridPro
 
   return (
     <div className={styles.grid}>
-      {snippets.map((snippet) => (
+      {snippetsArray.map((snippet) => (
         <article 
           key={snippet.id} 
           className={styles.card}
