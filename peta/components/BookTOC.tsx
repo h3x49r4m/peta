@@ -59,9 +59,14 @@ export default function BookTOC({ book }: BookTOCProps) {
       }
     );
 
-    // Observe all sections
+    // Observe all sections (both actual and placeholders)
     book.sections.forEach((section) => {
-      const element = document.getElementById(`section-${section.id}`);
+      // Try to observe the actual section first
+      let element = document.getElementById(`section-${section.id}`);
+      if (!element) {
+        // If not found, observe the placeholder
+        element = document.getElementById(`section-placeholder-${section.id}`);
+      }
       if (element) {
         observerRef.current?.observe(element);
       }
@@ -75,7 +80,14 @@ export default function BookTOC({ book }: BookTOCProps) {
   }, [book.sections]);
 
   const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(`section-${sectionId}`);
+    // First try to find the actual section (if already loaded)
+    let element = document.getElementById(`section-${sectionId}`);
+    
+    // If not found, try the placeholder (if not yet loaded)
+    if (!element) {
+      element = document.getElementById(`section-placeholder-${sectionId}`);
+    }
+    
     if (element) {
       const offset = 100; // Header offset
       const elementPosition = element.getBoundingClientRect().top;
@@ -99,7 +111,7 @@ export default function BookTOC({ book }: BookTOCProps) {
             {book.sections.map((section) => (
               <li 
                 key={section.id} 
-                className={`${styles.tocItem} ${activeId === `section-${section.id}` ? styles.active : ''}`}
+                className={`${styles.tocItem} ${activeId === `section-${section.id}` || activeId === `section-placeholder-${section.id}` ? styles.active : ''}`}
               >
                 <a 
                   href={`#section-${section.id}`}
