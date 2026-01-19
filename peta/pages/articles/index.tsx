@@ -260,7 +260,11 @@ const parseRST = (text: string, articleTitle: string, snippetId?: string): strin
           }
           
           isFirstHeading = false;
-          const headingId = snippetId ? `${snippetId}-heading-${headingCounter++}` : `heading-${headingCounter++}`;
+          // Convert heading text to slug format for meaningful IDs
+          const headingSlug = headingText.toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+            .replace(/\s+/g, '-'); // Replace spaces with hyphens
+          const headingId = snippetId ? `${snippetId}-${headingSlug}` : `heading-${headingSlug}`;
           output.push(`<h${headerLevel} id="${headingId}">${headingText}</h${headerLevel}>`);
           i += 2; // Skip the underline
           continue;

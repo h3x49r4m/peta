@@ -123,7 +123,7 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
           
 
-                    const snippetId = item.id || `snippet-${Math.random().toString(36).substr(2, 9)}`;
+                    const snippetId = item.id || `snippet-${index}`;
 
           
 
@@ -209,11 +209,7 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
           
 
-                                const headingText = snippetLine.trim();
-
-          
-
-                                const headingId = `${snippetId}-heading-${headingCounter++}`;
+                                                                const headingText = snippetLine.trim();
 
           
 
@@ -221,7 +217,63 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
           
 
-                                snippetChildren.push({
+                                                                // Convert heading text to slug format for meaningful IDs
+
+          
+
+                                
+
+          
+
+                                                                                            const headingSlug = headingText.toLowerCase()
+
+          
+
+                                
+
+          
+
+                                                                                              .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+
+          
+
+                                
+
+          
+
+                                                                                              .replace(/\s+/g, '-'); // Replace spaces with hyphens
+
+          
+
+                                
+
+          
+
+                                                                                            const headingId = `${snippetId}-${headingSlug}`;
+
+          
+
+                                
+
+          
+
+                                                                                            console.log(`Generated snippet header ID: ${headingId} for heading: ${headingText}`);
+
+          
+
+                                
+
+          
+
+                                                                
+
+          
+
+                                
+
+          
+
+                                                                snippetChildren.push({
 
           
 
@@ -323,11 +375,7 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
           
 
-                            const headingText = snippetLine.trim();
-
-          
-
-                            const headingId = `${snippetId}-heading-${headingCounter++}`;
+                                                        const headingText = snippetLine.trim();
 
           
 
@@ -335,7 +383,127 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
           
 
-                            snippetChildren.push({
+                            
+
+          
+
+                            
+
+          
+
+                                                        // Convert heading text to slug format for meaningful IDs
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                                                                    const headingSlug = headingText.toLowerCase()
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                                                                      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                                                                      .replace(/\s+/g, '-'); // Replace spaces with hyphens
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                                                                    const headingId = `${snippetId}-${headingSlug}`;
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                                                                    console.log(`Generated snippet header ID: ${headingId} for heading: ${headingText}`);
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                                                        
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                            
+
+          
+
+                                                        snippetChildren.push({
 
           
 
@@ -641,13 +809,13 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
             <button 
               className="tocLink snippetToggle" 
               onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleSnippet(item.id);
-                // Also scroll to snippet position
-                scrollToHeading(item.id);
-              }}
-            >
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleSnippet(item.id);
+                            // Also scroll to snippet position and update URL hash
+                            window.history.pushState(null, '', `#${item.id}`);
+                            scrollToHeading(item.id);
+                          }}            >
               <span 
                 style={{ 
                   display: 'inline-flex', 
@@ -674,6 +842,8 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
               className="tocLink" 
               onClick={(e) => {
                 e.preventDefault();
+                // Update URL hash
+                window.history.pushState(null, '', `#${item.id}`);
                 scrollToHeading(item.id);
               }}
             >
@@ -694,6 +864,8 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
       <li key={item.id || index} className={itemClass}>
         <a href={`#${item.id}`} className="tocLink" onClick={(e) => {
           e.preventDefault();
+          // Update URL hash
+          window.history.pushState(null, '', `#${item.id}`);
           scrollToHeading(item.id);
         }}>
           {item.title}
