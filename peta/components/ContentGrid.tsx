@@ -15,7 +15,10 @@ interface ContentGridProps {
 }
 
 export default function ContentGrid({ items }: ContentGridProps) {
-  if (items.length === 0) {
+  // Ensure items is an array
+  const itemsArray = Array.isArray(items) ? items : [];
+  
+  if (itemsArray.length === 0) {
     return (
       <div className={styles.empty}>
         <p>No content found.</p>
@@ -38,7 +41,7 @@ export default function ContentGrid({ items }: ContentGridProps) {
 
   return (
     <div className={styles.grid}>
-      {items.map((item) => (
+      {itemsArray.map((item) => (
         <article key={item.id} className={styles.card}>
           <div className={styles.cardContent}>
             <div className={styles.cardHeader}>

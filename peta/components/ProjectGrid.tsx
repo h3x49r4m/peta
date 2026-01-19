@@ -17,7 +17,10 @@ interface ProjectGridProps {
 }
 
 export default function ProjectGrid({ projects, onProjectClick }: ProjectGridProps) {
-  if (projects.length === 0) {
+  // Ensure projects is an array
+  const projectsArray = Array.isArray(projects) ? projects : [];
+  
+  if (projectsArray.length === 0) {
     return (
       <div className={styles.empty}>
         <p>No projects found.</p>
@@ -46,7 +49,7 @@ export default function ProjectGrid({ projects, onProjectClick }: ProjectGridPro
 
   return (
     <div className={styles.grid}>
-      {projects.map((project) => (
+      {projectsArray.map((project) => (
         <article 
           key={project.id} 
           className={styles.card}

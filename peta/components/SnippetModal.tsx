@@ -28,7 +28,7 @@ export default function SnippetModal({ snippet, isOpen, onClose }: SnippetModalP
   }, [snippet, isOpen]);
 
   const parseNestedList = (lines: string[], startIndex: number): { html: string; nextIndex: number } => {
-  const items = [];
+  const items: string[] = [];
   let i = startIndex;
   let currentIndent = -1;
   

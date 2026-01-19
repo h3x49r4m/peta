@@ -250,7 +250,6 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
 
     return {
       props: { post: postItem },
-      revalidate: 60, // Revalidate at most every minute
     };
   } catch (error) {
     console.error(`Error loading post ${slug}:`, error);
