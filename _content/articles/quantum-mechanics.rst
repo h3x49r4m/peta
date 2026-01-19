@@ -5,9 +5,6 @@ tags: ["physics", "quantum", "science"]
 author: "Dr. Jane Smith"
 ---
 
-Introduction to Quantum Mechanics
-================================
-
 Quantum mechanics is the fundamental theory that describes nature at the smallest scales of energy levels of atoms and subatomic particles.
 
 .. snippet-card:: wave-function

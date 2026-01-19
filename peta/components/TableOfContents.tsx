@@ -1,122 +1,459 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styles from '../styles/TableOfContents.module.css';
 
 interface TOCItem {
   id: string;
   title: string;
   level: number;
+  children?: TOCItem[];
 }
 
 interface TableOfContentsProps {
-  content: string;
+
+  content: any[];
+
   postTitle?: string;
+
 }
 
+
+
 export default function TableOfContents({ content, postTitle }: TableOfContentsProps) {
+
   const [headings, setHeadings] = useState<TOCItem[]>([]);
+
   const [activeId, setActiveId] = useState<string>('');
+  const [expandedSnippets, setExpandedSnippets] = useState<Set<string>>(new Set());
+
   const observerRef = useRef<IntersectionObserver | null>(null);
+
   const processedRef = useRef(false);
 
+
+
   useEffect(() => {
+
     if (!content || processedRef.current) return;
+
+    
+
     processedRef.current = true;
+
     
-    // Function to extract headings from the content string
-    const extractHeadingsFromContent = () => {
-      // Create a temporary div to parse the HTML
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = content;
-      
+
+    // Function to extract headings from RST content
+
+    const extractHeadingsFromRST = () => {
+
       const extractedHeadings: TOCItem[] = [];
+
+      let headingCounter = 0;
+
       
-      // Extract all headings (h1, h2, h3, h4) from regular content
-      const headingElements = tempDiv.querySelectorAll('h1, h2, h3, h4');
-      
-      headingElements.forEach((heading, index) => {
-        // Skip headings that are inside snippet cards
-        if (!heading.closest('.snippetCard')) {
-          const level = parseInt(heading.tagName.charAt(1));
-          const title = heading.textContent || '';
-          const id = `heading-${index}`;
+
+      content.forEach((item) => {
+
+        if (item.type === 'text') {
+
+          // Parse RST text to find headings
+
+          const lines = item.content.split('\n');
+
           
-          extractedHeadings.push({
-            id,
-            title,
-            level
-          });
-        }
-      });
-      
-      // Extract embedded snippets as sections
-      const snippetCards = tempDiv.querySelectorAll('.snippetCard');
-      
-      snippetCards.forEach((card, index) => {
-        const headerElement = card.querySelector('.snippetHeader h3');
-        if (headerElement) {
-          const title = headerElement.textContent || '';
-          const cardId = card.id || `snippet-${index}`;
-          
-          extractedHeadings.push({
-            id: cardId,
-            title: title.startsWith('Snippet:') ? title : `Snippet: ${title}`,
-            level: 2
-          });
-        }
-      });
-      
-      return extractedHeadings;
-    };
-    
-    // Function to add IDs to headings in the DOM
-    const addIdsToDOMHeadings = (extractedHeadings: TOCItem[]) => {
-      // Find all headings in the article content
-      const articleContent = document.querySelector('.articleContent');
-      if (!articleContent) {
-        // Retry once if content is not ready
-        setTimeout(() => addIdsToDOMHeadings(extractedHeadings), 100);
-        return;
-      }
-      
-      // Add IDs to all headings (h1, h2, h3, h4)
-      const headingElements = articleContent.querySelectorAll('h1, h2, h3, h4');
-      
-      headingElements.forEach((heading) => {
-        // Only add IDs to regular headings, not snippet headers
-        if (!heading.closest('.snippetHeader') && !heading.id) {
-          // Find the corresponding heading in our extracted list
-          const headingText = heading.textContent || '';
-          const matchingItem = extractedHeadings.find(h => 
-            h.title === headingText && h.id.startsWith('heading-')
-          );
-          
-          if (matchingItem) {
-            heading.id = matchingItem.id;
+
+          for (let i = 0; i < lines.length; i++) {
+
+            const line = lines[i];
+
+            const nextLine = lines[i + 1];
+
+            
+
+            // Handle headers with underlines
+
+            if (nextLine && (nextLine.startsWith('=') || nextLine.startsWith('-') || nextLine.startsWith('~')) && 
+
+                nextLine.trim().length > 0) {
+
+              const underlineChar = nextLine.trim()[0];
+
+              if (nextLine.trim() === underlineChar.repeat(nextLine.trim().length)) {
+
+                let headerLevel = 2; // default for =
+
+                if (underlineChar === '-') headerLevel = 3;
+
+                else if (underlineChar === '~') headerLevel = 4;
+
+                
+
+                const headingText = line.trim();
+
+                const id = `heading-${headingCounter++}`;
+
+                
+
+                extractedHeadings.push({
+
+                  id,
+
+                  title: headingText,
+
+                  level: headerLevel
+
+                });
+
+              }
+
+            }
+
           }
+
+        } else if (item.type === 'embedded-snippet') {
+
+          // Add snippet as a heading
+
+          
+
+                    const snippetTitle = item.title || item.id;
+
+          
+
+                    const formattedTitle = snippetTitle.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+          
+
+                    const snippetId = item.id || `snippet-${Math.random().toString(36).substr(2, 9)}`;
+
+          
+
+                    
+
+          
+
+                    // Collect snippet headers
+
+                    const snippetChildren: TOCItem[] = [];
+
+          
+
+                    // Add snippet's internal headings if they exist
+
+          
+
+                    if (item.content && Array.isArray(item.content)) {
+
+          
+
+                      item.content.forEach((c: any) => {
+
+          
+
+                        if (c.type === 'text') {
+
+          
+
+                          const snippetLines = c.content.split('\n');
+
+          
+
+                          
+
+          
+
+                          for (let j = 0; j < snippetLines.length; j++) {
+
+          
+
+                            const snippetLine = snippetLines[j];
+
+          
+
+                            const snippetNextLine = snippetLines[j + 1];
+
+          
+
+                            
+
+          
+
+                            if (snippetNextLine && (snippetNextLine.startsWith('=') || snippetNextLine.startsWith('-') || snippetNextLine.startsWith('~')) && 
+
+          
+
+                                snippetNextLine.trim().length > 0) {
+
+          
+
+                              const underlineChar = snippetNextLine.trim()[0];
+
+          
+
+                              if (snippetNextLine.trim() === underlineChar.repeat(snippetNextLine.trim().length)) {
+
+          
+
+                                let headerLevel = 2;
+
+          
+
+                                if (underlineChar === '-') headerLevel = 3;
+
+          
+
+                                else if (underlineChar === '~') headerLevel = 4;
+
+          
+
+                                
+
+          
+
+                                const headingText = snippetLine.trim();
+
+          
+
+                                const headingId = `${snippetId}-heading-${headingCounter++}`;
+
+          
+
+                                
+
+          
+
+                                snippetChildren.push({
+
+          
+
+                                  id: headingId,
+
+          
+
+                                  title: headingText,
+
+          
+
+                                  level: headerLevel + 1 // Nest under snippet
+
+          
+
+                                });
+
+                              }
+
+          
+
+                            }
+
+          
+
+                          }
+
+          
+
+                        }
+
+          
+
+                      });
+
+          
+
+                    } else if (item.content && typeof item.content === 'string') {
+
+          
+
+                      // Handle single string content
+
+          
+
+                      const snippetLines = item.content.split('\n');
+
+          
+
+                      
+
+          
+
+                      for (let j = 0; j < snippetLines.length; j++) {
+
+          
+
+                        const snippetLine = snippetLines[j];
+
+          
+
+                        const snippetNextLine = snippetLines[j + 1];
+
+          
+
+                        
+
+          
+
+                        if (snippetNextLine && (snippetNextLine.startsWith('=') || snippetNextLine.startsWith('-') || snippetNextLine.startsWith('~')) && 
+
+          
+
+                            snippetNextLine.trim().length > 0) {
+
+          
+
+                          const underlineChar = snippetNextLine.trim()[0];
+
+          
+
+                          if (snippetNextLine.trim() === underlineChar.repeat(snippetNextLine.trim().length)) {
+
+          
+
+                            let headerLevel = 2;
+
+          
+
+                            if (underlineChar === '-') headerLevel = 3;
+
+          
+
+                            else if (underlineChar === '~') headerLevel = 4;
+
+          
+
+                            
+
+          
+
+                            const headingText = snippetLine.trim();
+
+          
+
+                            const headingId = `${snippetId}-heading-${headingCounter++}`;
+
+          
+
+                            
+
+          
+
+                            snippetChildren.push({
+
+          
+
+                              id: headingId,
+
+          
+
+                              title: headingText,
+
+          
+
+                              level: headerLevel + 1 // Nest under snippet
+
+          
+
+                            });
+
+                          }
+
+          
+
+                        }
+
+          
+
+                      }
+
+          
+
+                    }
+
+          
+
+                    extractedHeadings.push({
+
+          
+
+                      id: snippetId,
+
+          
+
+                      title: `Snippet: ${formattedTitle}`,
+
+          
+
+                      level: 2,
+
+          
+
+                      children: snippetChildren // Store children directly with the snippet
+
+                    });
+
         }
+
       });
+
+      
+
+      return extractedHeadings;
+
     };
+
     
-    // Extract headings from content
-    const extractedHeadings = extractHeadingsFromContent();
+
+    // Extract headings directly from RST content
+
+    const extractedHeadings = extractHeadingsFromRST();
     
     if (extractedHeadings.length > 0) {
-      // Set the headings state immediately
       setHeadings(extractedHeadings);
-      
-      // Add IDs to DOM after a short delay to ensure content is rendered
-      setTimeout(() => addIdsToDOMHeadings(extractedHeadings), 50);
     } else {
-      // No headings found
       setHeadings([]);
     }
+
     
+
     return () => {
+
       processedRef.current = false;
+
     };
+
   }, [content]);
 
   useEffect(() => {
+    // Add IDs to headings in the DOM
+    const addIdsToDOM = () => {
+      headings.forEach((heading) => {
+        // Find the heading element by text content
+        const allHeadings = document.querySelectorAll('h1, h2, h3, h4');
+        const matchingHeading = Array.from(allHeadings).find(h => 
+          h.textContent === heading.title && !h.id
+        );
+        
+        if (matchingHeading) {
+          matchingHeading.id = heading.id;
+        }
+      });
+    };
+
+    // Try to add IDs immediately
+    addIdsToDOM();
+    
+    // If not all headings have IDs, retry a few times
+    let retryCount = 0;
+    const retryInterval = setInterval(() => {
+      const allHeadings = document.querySelectorAll('h1, h2, h3, h4');
+      const headingsWithIds = Array.from(allHeadings).filter(h => h.id);
+      
+      if (headingsWithIds.length === headings.length || retryCount >= 5) {
+        clearInterval(retryInterval);
+      } else {
+        addIdsToDOM();
+        retryCount++;
+      }
+    }, 200);
+
     // Clean up previous observer
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -150,6 +487,7 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
+      clearInterval(retryInterval);
     };
   }, [headings]);
 
@@ -196,30 +534,156 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
     }
   };
 
+// Function to build hierarchical structure from flat headings array
+    const buildHierarchy = (headings: TOCItem[]): TOCItem[] => {
+      const result: TOCItem[] = [];
+      const processed = new Set<string>();
+      
+      headings.forEach((heading, index) => {
+        if (processed.has(heading.id)) return;
+        
+        // If it's a snippet, determine if it should be nested
+        if (heading.title.includes('Snippet:')) {
+          let parentHeading = null;
+          let shouldNest = false;
+          
+          // Only nest if snippet appears AFTER a heading (not before)
+          // Look for parent before the snippet
+          for (let i = index - 1; i >= 0; i--) {
+            const candidate = headings[i];
+            if (!candidate.title.includes('Snippet:')) {
+              // Check if snippet is close to this heading (within 1 position)
+              if (index - i <= 1) {
+                parentHeading = candidate;
+                shouldNest = true;
+              }
+              break;
+            }
+          }
+          
+          // If snippet appears before any heading, it's standalone
+          if (shouldNest && parentHeading) {
+            // Find or create parent in result
+            let parentInResult = result.find(item => item.id === parentHeading.id);
+            
+            if (!parentInResult) {
+              parentInResult = {
+                ...parentHeading,
+                children: []
+              };
+              result.push(parentInResult);
+              processed.add(parentHeading.id);
+            }
+            
+            // Add snippet to parent with its children
+            parentInResult.children!.push({
+              ...heading,
+              children: heading.children || []
+            });
+            processed.add(heading.id);
+          } else {
+            // Standalone snippet - add as top-level with its children
+            result.push({
+              ...heading,
+              children: heading.children || []
+            });
+            processed.add(heading.id);
+          }
+        } else if (!heading.title.includes('Snippet:')) {
+          // Regular heading - check if already added
+          const isInResult = result.some(item => item.id === heading.id);
+          
+          if (!isInResult && !processed.has(heading.id)) {
+            result.push({
+              ...heading,
+              children: []
+            });
+            processed.add(heading.id);
+          }
+        }
+      });
+      
+      return result;
+    };
+  
+  // Function to toggle snippet expansion
+  const toggleSnippet = (snippetId: string) => {
+    setExpandedSnippets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(snippetId)) {
+        newSet.delete(snippetId);
+      } else {
+        newSet.add(snippetId);
+      }
+      return newSet;
+    });
+  };
+
+// Function to render TOC items recursively
+  const renderTOCItem = (item: TOCItem, index: number, parentLevel: number = 0) => {
+    const isActive = activeId === item.id;
+    const isSnippet = item.title.includes('Snippet:');
+    const isExpanded = expandedSnippets.has(item.id);
+    const hasChildren = item.children && item.children.length > 0;
+    
+    // Calculate the actual level for styling
+    const actualLevel = isSnippet ? parentLevel + 1 : item.level;
+    const itemClass = `tocItem level-${actualLevel} ${isActive ? 'active' : ''}`;
+    const snippetClass = isSnippet ? 'snippetItem' : '';
+
+    // For snippets, use button with toggle
+    if (isSnippet) {
+      const snippetTitle = item.title.replace('Snippet: ', '');
+      const displayTitle = `${isExpanded ? '- Snippet: ' : '+ Snippet: '}${snippetTitle}`;
+      
+      return (
+        <li key={item.id || index} className={`${itemClass} ${snippetClass}`}>
+          <button 
+            className="tocLink snippetToggle" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleSnippet(item.id);
+            }}
+          >
+            {displayTitle}
+          </button>
+          {isExpanded && hasChildren && (
+            <ul className="tocList">
+              {item.children!.map((child, childIndex) => renderTOCItem(child, childIndex, actualLevel))}
+            </ul>
+          )}
+        </li>
+      );
+    }
+
+    // For regular headings
+    return (
+      <li key={item.id || index} className={itemClass}>
+        <a href={`#${item.id}`} className="tocLink" onClick={(e) => {
+          e.preventDefault();
+          scrollToHeading(item.id);
+        }}>
+          {item.title}
+        </a>
+        {hasChildren && (
+          <ul className="tocList">
+            {item.children!.map((child, childIndex) => renderTOCItem(child, childIndex, actualLevel))}
+          </ul>
+        )}
+      </li>
+    );
+  };
+  
+  const hierarchicalHeadings = buildHierarchy(headings);
+
   // Always render the component for debugging
   return (
     <div className={styles.tableOfContents}>
       <h3 className={styles.tocTitle}>{postTitle || 'Table of Contents'}</h3>
       {headings.length > 0 ? (
         <ul className={styles.tocList}>
-          {headings.map((heading) => (
-            <li
-              key={heading.id}
-              className={`${styles.tocItem} ${styles[`level-${heading.level}`]} ${
-                activeId === heading.id ? styles.active : ''
-              }`}
-            >
-              <button
-                className={styles.tocLink}
-                onClick={() => {
-                  console.log(`Clicked on heading: ${heading.title} with ID: ${heading.id}`);
-                  scrollToHeading(heading.id);
-                }}
-              >
-                {heading.title}
-              </button>
-            </li>
-          ))}
+          {hierarchicalHeadings.map((item, index) => renderTOCItem(item, index))}
         </ul>
       ) : (
         <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>

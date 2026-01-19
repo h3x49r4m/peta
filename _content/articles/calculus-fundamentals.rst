@@ -5,15 +5,14 @@ tags: ["mathematics", "calculus", "analysis"]
 author: "Prof. John Doe"
 ---
 
-Calculus Fundamentals
-=====================
 
 Calculus is the mathematical study of continuous change. It has two major branches: differential calculus and integral calculus.
 
-.. snippet-card:: derivatives
 
 Derivatives
 -----------
+
+.. snippet-card:: derivatives
 
 The derivative of a function $f(x)$ with respect to $x$ is defined as:
 
@@ -27,10 +26,11 @@ Common derivatives include:
 - $\frac{d}{dx}(\sin x) = \cos x$
 - $\frac{d}{dx}(e^x) = e^x$
 
-.. snippet-card:: integrals
 
 Integrals
 ---------
+
+.. snippet-card:: integrals
 
 The integral is the inverse operation of differentiation. The definite integral is defined as:
 

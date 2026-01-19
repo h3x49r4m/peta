@@ -224,12 +224,13 @@ export default function Articles() {
   };
 };
 
-const parseRST = (text: string, articleTitle: string): string => {
+const parseRST = (text: string, articleTitle: string, snippetId?: string): string => {
     // Convert RST to HTML while preserving math formulas
     const lines = text.split('\n');
     const output: string[] = [];
     let i = 0;
     let isFirstHeading = true;
+    let headingCounter = 0; // Add counter for heading IDs
     
     console.log('parseRST input:', text);
     
@@ -259,7 +260,8 @@ const parseRST = (text: string, articleTitle: string): string => {
           }
           
           isFirstHeading = false;
-          output.push(`<h${headerLevel}>${headingText}</h${headerLevel}>`);
+          const headingId = snippetId ? `${snippetId}-heading-${headingCounter++}` : `heading-${headingCounter++}`;
+          output.push(`<h${headerLevel} id="${headingId}">${headingText}</h${headerLevel}>`);
           i += 2; // Skip the underline
           continue;
         }
@@ -348,7 +350,8 @@ const parseRST = (text: string, articleTitle: string): string => {
         const snippetTitle = item.title || item.id;
         const formattedTitle = snippetTitle.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
         
-        let snippetContent = `<div class="${styles.snippetCard}">
+        const snippetId = item.id || `snippet-${i}`;
+        let snippetContent = `<div class="${styles.snippetCard}" id="${snippetId}">
           <div class="${styles.snippetHeader}">
             <h3>${formattedTitle}</h3>
             <span class="${styles.snippetType}">Snippet</span>
@@ -359,7 +362,7 @@ const parseRST = (text: string, articleTitle: string): string => {
         if (item.content && Array.isArray(item.content)) {
           item.content.forEach((c: any) => {
             if (c.type === 'text') {
-              snippetContent += parseRST(c.content, articleTitle);
+              snippetContent += parseRST(c.content, articleTitle, snippetId);
             }
           });
         }
@@ -428,7 +431,7 @@ const parseRST = (text: string, articleTitle: string): string => {
             
             snippet.content?.forEach((c: any) => {
               if (c.type === 'text') {
-                snippetContent += parseRST(c.content, articleTitle);
+                snippetContent += parseRST(c.content, articleTitle, `snippet-${snippetId}`);
               }
             });
             
@@ -486,7 +489,6 @@ const parseRST = (text: string, articleTitle: string): string => {
     if (selectedPost) {
       renderContent(selectedPost.content, selectedPost.title).then(htmlContent => {
         setRenderedContent(htmlContent);
-        console.log('Content rendered, showing TOC');
         // Show TOC immediately after content is set
         setShowTOC(true);
       });
@@ -522,9 +524,9 @@ const parseRST = (text: string, articleTitle: string): string => {
         ) : selectedPost ? (
           <>
             <aside className={styles.tocAside}>
-              {showTOC && renderedContent && (
+              {showTOC && selectedPost && (
                 <TableOfContents 
-                  content={renderedContent} 
+                  content={selectedPost.content} 
                   postTitle={selectedPost.title}
                 />
               )}
