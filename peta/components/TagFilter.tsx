@@ -12,7 +12,8 @@ interface TagFilterProps {
 }
 
 export default function TagFilter({ tags, selectedTag, onTagSelect }: TagFilterProps) {
-  if (tags.length === 0) {
+  // Check if tags is undefined, null, or not an array
+  if (!tags || !Array.isArray(tags) || tags.length === 0) {
     return null;
   }
 

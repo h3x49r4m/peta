@@ -22,8 +22,8 @@ async function processContent() {
   const snippetResolver = new SnippetResolver();
   const snippets = await snippetResolver.loadSnippets();
   
-  // Process posts
-  await processContentType('posts', snippets, snippetResolver);
+  // Process posts (from articles directory)
+  await processContentType('articles', snippets, snippetResolver, 'articles');
   
   // Process snippets
   await processContentType('snippets', snippets);
@@ -40,7 +40,7 @@ async function processContent() {
   console.log('Content processing complete!');
 }
 
-async function processContentType(type, snippets = [], snippetResolver = null) {
+async function processContentType(type, snippets = [], snippetResolver = null, outputType = null) {
   console.log(`Processing ${type}...`);
   
   const contentDir = path.join(CONTENT_DIR, type);
@@ -56,7 +56,8 @@ async function processContentType(type, snippets = [], snippetResolver = null) {
     const parsed = await parseRst(content);
     
     // Process snippet references if this is a post and we have snippet resolver
-    if (type === 'posts' && snippetResolver) {
+    const actualType = outputType || type;
+    if (actualType === 'posts' && snippetResolver) {
       parsed.content = await snippetResolver.resolveSnippets(parsed.content, snippets);
     }
     
@@ -67,12 +68,13 @@ async function processContentType(type, snippets = [], snippetResolver = null) {
   }
   
   // Create chunks
+  const actualType = outputType || type;
   for (let i = 0; i < items.length; i += CHUNK_SIZE) {
     const chunk = items.slice(i, i + CHUNK_SIZE);
     const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1;
     
     await fs.writeJson(
-      path.join(OUTPUT_DIR, 'content-chunks', `${type}-chunk-${chunkNumber}.json`),
+      path.join(OUTPUT_DIR, 'content-chunks', `${actualType}-chunk-${chunkNumber}.json`),
       chunk,
       { spaces: 2 }
     );
@@ -82,7 +84,7 @@ async function processContentType(type, snippets = [], snippetResolver = null) {
   
   // Create index file
   await fs.writeJson(
-    path.join(OUTPUT_DIR, `${type}-index.json`),
+    path.join(OUTPUT_DIR, `${actualType}-index.json`),
     { items, total: items.length },
     { spaces: 2 }
   );

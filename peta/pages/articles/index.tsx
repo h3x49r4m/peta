@@ -107,10 +107,10 @@ export default function Articles() {
             const dateB = new Date(b.date);
             return dateB.getTime() - dateA.getTime(); // Newest first
           })
-        : postsData;
+        : [];
       
       setPosts(sortedPosts);
-      setTags(tagsData);
+      setTags(Array.isArray(tagsData) ? tagsData : []);
     } catch (error) {
       console.error('Error loading articles content:', error);
     } finally {
@@ -118,9 +118,11 @@ export default function Articles() {
     }
   };
 
-  const filteredPosts = selectedTag
-    ? posts.filter(post => post.tags.includes(selectedTag))
-    : posts;
+  const filteredPosts = Array.isArray(posts)
+    ? selectedTag
+      ? posts.filter(post => Array.isArray(post.tags) && post.tags.includes(selectedTag))
+      : posts
+    : [];
 
   const handlePostClick = (post: ArticlePost) => {
     setSelectedPost(post);

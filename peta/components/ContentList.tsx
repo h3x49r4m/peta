@@ -18,7 +18,8 @@ interface ContentListProps {
 }
 
 export default function ContentList({ items, type, onItemClick }: ContentListProps) {
-  if (items.length === 0) {
+  // Check if items is undefined, null, or not an array
+  if (!items || !Array.isArray(items) || items.length === 0) {
     return (
       <div className={styles.empty}>
         <p>No {type}s found.</p>
