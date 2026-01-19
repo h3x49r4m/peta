@@ -637,17 +637,17 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
       
       return (
         <li key={item.id || index} className={`${itemClass} ${snippetClass}`}>
-          <button 
-            className="tocLink snippetToggle" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleSnippet(item.id);
-              // Also scroll to snippet position
-              scrollToHeading(item.id);
-            }}
-          >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          {hasChildren ? (
+            <button 
+              className="tocLink snippetToggle" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleSnippet(item.id);
+                // Also scroll to snippet position
+                scrollToHeading(item.id);
+              }}
+            >
               <span 
                 style={{ 
                   display: 'inline-flex', 
@@ -666,9 +666,20 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
               >
                 {isExpanded ? '−' : '+'}
               </span>
-              <span>Snippet: {snippetTitle}</span>
-            </span>
-          </button>
+              Snippet: {snippetTitle}
+            </button>
+          ) : (
+            <a 
+              href={`#${item.id}`} 
+              className="tocLink" 
+              onClick={(e) => {
+                e.preventDefault();
+                scrollToHeading(item.id);
+              }}
+            >
+              Snippet: {snippetTitle}
+            </a>
+          )}
           {isExpanded && hasChildren && (
             <ul className="tocList">
               {item.children!.map((child, childIndex) => renderTOCItem(child, childIndex, actualLevel))}
