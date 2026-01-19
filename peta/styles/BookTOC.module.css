@@ -7,6 +7,7 @@
   align-items: center;
   z-index: 999;
   transition: all 0.3s ease;
+  font-size: 0.875rem;
 }
 
 .bookTOC.expanded {
@@ -35,12 +36,11 @@
 }
 
 .tocPanel {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-right: 0.5rem;
   max-height: calc(100vh - 120px);
   overflow-y: auto;
@@ -57,20 +57,16 @@
 }
 
 .tocHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e5e5;
   padding-bottom: 0.5rem;
 }
 
 .tocTitle {
-  font-size: 0.9rem;
-  font-weight: 400;
+  font-size: 1rem;
+  font-weight: 600;
   margin: 0;
-  color: #666;
-  flex: 1;
+  color: #333;
 }
 
 .tocList {
@@ -80,17 +76,15 @@
 }
 
 .tocItem {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .tocLink {
-  color: #888;
+  color: var(--text-primary);
   text-decoration: none;
   display: block;
-  padding: 0.25rem 0;
-  transition: all 0.2s ease;
-  font-weight: 400;
-  font-size: 0.875rem;
+  padding: 0.2rem 0.4rem;
+  transition: color 0.2s ease;
 }
 
 .tocLink:hover {
@@ -98,21 +92,8 @@
 }
 
 .tocLink.active {
-  color: #333;
-  font-weight: 400;
-  position: relative;
-}
-
-.tocLink.active::before {
-  content: '';
-  position: absolute;
-  left: -1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 12px;
-  background-color: #333;
-  border-radius: 2px;
+  color: var(--primary-color);
+  font-weight: 600;
 }
 
 /* Responsive styles */
