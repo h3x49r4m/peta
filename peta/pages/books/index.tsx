@@ -140,7 +140,11 @@ export default function Books() {
     // Collect all table lines
     while (i < lines.length && (lines[i].includes('|') || lines[i].trim() === '')) {
       if (lines[i].trim()) {
-        tableLines.push(lines[i]);
+        // Skip separator lines (lines with only |, -, and spaces)
+        const trimmed = lines[i].replace(/\s/g, '');
+        if (!trimmed.match(/^\|[-\|]+\|?$/)) {
+          tableLines.push(lines[i]);
+        }
       }
       i++;
     }
@@ -194,6 +198,114 @@ export default function Books() {
     html += '</tbody>\n</table>\n';
     
     return { html, nextIndex: i };
+  };
+
+  const parseRstSimpleTable = (lines: string[], startIndex: number): { html: string; nextIndex: number } => {
+    // Handle RST simple tables with space-separated columns and dash separators
+    const rows: string[][] = [];
+    let i = startIndex;
+    
+    // Get header row
+    const headerLine = lines[i];
+    const headerCells = parseTableRow(headerLine);
+    if (headerCells.length === 0) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Check if the next line is a separator line (dashes)
+    if (i + 1 >= lines.length || !lines[i + 1].trim().match(/^[=-]+(\s+[=-]+)*$/)) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Skip the separator line (dashes)
+    i += 2;
+    
+    // Parse data rows until we hit an empty line or a line that looks like another separator
+    while (i < lines.length && lines[i].trim() !== '') {
+      const line = lines[i].trim();
+      
+      // Stop if we encounter another separator line
+      if (line.match(/^[=-]+(\s+[=-]+)*$/)) {
+        break;
+      }
+      
+      const rowCells = parseTableRow(lines[i]);
+      if (rowCells.length > 0) {
+        rows.push(rowCells);
+      }
+      i++;
+    }
+    
+    // Generate HTML table
+    let html = '<table class="rst-table">\n';
+    
+    // Generate header
+    html += '<thead>\n<tr>\n';
+    for (const cell of headerCells) {
+      const formattedCell = cell
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code>$1</code>');
+      html += `<th>${formattedCell}</th>\n`;
+    }
+    html += '</tr>\n</thead>\n';
+    
+    // Generate body
+    html += '<tbody>\n';
+    for (const row of rows) {
+      html += '<tr>\n';
+      for (const cell of row) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<td>${formattedCell}</td>\n`;
+      }
+      html += '</tr>\n';
+    }
+    html += '</tbody>\n</table>\n';
+    
+    return { html, nextIndex: i };
+  };
+
+  const parseTableRow = (line: string): string[] => {
+    // Parse a table row by identifying column boundaries
+    // This handles both space-separated and tab-separated columns
+    const cells: string[] = [];
+    
+    // First try to split on tabs (if any)
+    if (line.includes('\t')) {
+      const parts = line.split('\t');
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (trimmed) {
+          cells.push(trimmed);
+        }
+      }
+    } else {
+      // Split on multiple spaces (3 or more for better column detection)
+      const parts = line.split(/\s{3,}/);
+      
+      // If that doesn't work well, try with 2 spaces
+      if (parts.length === 1) {
+        const fallbackParts = line.split(/\s{2,}/);
+        for (const part of fallbackParts) {
+          const trimmed = part.trim();
+          if (trimmed) {
+            cells.push(trimmed);
+          }
+        }
+      } else {
+        for (const part of parts) {
+          const trimmed = part.trim();
+          if (trimmed) {
+            cells.push(trimmed);
+          }
+        }
+      }
+    }
+    
+    return cells;
   };
 
   const parseRSTTable = (lines: string[], startIndex: number): { html: string; nextIndex: number } => {
@@ -308,8 +420,18 @@ export default function Books() {
       }
       
       // Handle simple tables (with | separators)
-      if (line.includes('|') && line.trim().startsWith('|')) {
+      if (line.includes('|')) {
         const tableResult = parseSimpleTable(lines, i);
+        if (tableResult.html) {
+          output.push(tableResult.html);
+          i = tableResult.nextIndex;
+          continue;
+        }
+      }
+      
+      // Handle RST simple tables (with column headers and dash separators)
+      if (nextLine && nextLine.trim().match(/^[=-]+(\s+[=-]+)*$/)) {
+        const tableResult = parseRstSimpleTable(lines, i);
         if (tableResult.html) {
           output.push(tableResult.html);
           i = tableResult.nextIndex;
