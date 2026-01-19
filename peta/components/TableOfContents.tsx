@@ -634,7 +634,6 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
     // For snippets, use button with toggle
     if (isSnippet) {
       const snippetTitle = item.title.replace('Snippet: ', '');
-      const displayTitle = `${isExpanded ? '- Snippet: ' : '+ Snippet: '}${snippetTitle}`;
       
       return (
         <li key={item.id || index} className={`${itemClass} ${snippetClass}`}>
@@ -646,7 +645,27 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
               toggleSnippet(item.id);
             }}
           >
-            {displayTitle}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: '10px', 
+                  height: '10px',
+                  borderRadius: '1px',
+                  backgroundColor: 'var(--primary-color)',
+                  color: 'white',
+                  fontSize: '9px',
+                  fontWeight: 'bold',
+                  marginRight: '3px',
+                  transition: 'transform 0.2s ease'
+                }}
+              >
+                {isExpanded ? '−' : '+'}
+              </span>
+              <span>Snippet: {snippetTitle}</span>
+            </span>
           </button>
           {isExpanded && hasChildren && (
             <ul className="tocList">
