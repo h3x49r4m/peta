@@ -293,29 +293,85 @@
   right: 2rem;
   width: 3rem;
   height: 3rem;
-  border-radius: 50%;
   background-color: var(--primary-color, #0070f3);
   color: white;
   border: none;
+  border-radius: 50%;
   font-size: 1.5rem;
-  font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 112, 243, 0.3);
   z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .backToTop:hover {
-  background-color: var(--primary-hover, #0051cc);
+  background-color: var(--primary-dark, #0051cc);
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 112, 243, 0.4);
 }
 
-.backToTop:active {
-  transform: translateY(0);
+.bookSection {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border-color, #e1e5e9);
+}
+
+.bookSection:last-child {
+  border-bottom: none;
+}
+
+.bookSection h2 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.articleDescription {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.rst-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.875rem;
+  background-color: var(--surface-color, #ffffff);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.rst-table th,
+.rst-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color, #e1e5e9);
+}
+
+.rst-table th {
+  background-color: var(--surface-color, #f6f8fa);
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-color, #e1e5e9);
+}
+
+.rst-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rst-table tbody tr:hover {
+  background-color: var(--surface-color, #f6f8fa);
+}
+
+.rst-table code {
+  background-color: var(--surface-color, #f6f8fa);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.8em;
 }
 
 /* Responsive styles */

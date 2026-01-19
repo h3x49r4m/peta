@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import TagFilter from '../../components/TagFilter';
 import BookGrid from '../../components/BookGrid';
+import BookTableOfContents from '../../components/BookTableOfContents';
 import styles from '../../styles/Articles.module.css'; // Reuse Articles styles
 import MathRenderer from '../../components/MathRenderer';
 import Link from 'next/link';
@@ -132,6 +133,297 @@ export default function Books() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const parseSimpleTable = (lines: string[], startIndex: number): { html: string; nextIndex: number } => {
+    const tableLines: string[] = [];
+    let i = startIndex;
+    
+    // Collect all table lines
+    while (i < lines.length && (lines[i].includes('|') || lines[i].trim() === '')) {
+      if (lines[i].trim()) {
+        tableLines.push(lines[i]);
+      }
+      i++;
+    }
+    
+    if (tableLines.length < 2) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Parse table rows
+    const rows: string[][] = [];
+    for (const line of tableLines) {
+      const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
+      if (cells.length > 0) {
+        rows.push(cells);
+      }
+    }
+    
+    if (rows.length === 0) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Generate HTML table
+    let html = '<table class="rst-table">\n';
+    
+    // First row is header
+    if (rows.length > 0) {
+      html += '<thead>\n<tr>\n';
+      for (const cell of rows[0]) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<th>${formattedCell}</th>\n`;
+      }
+      html += '</tr>\n</thead>\n';
+    }
+    
+    // Remaining rows are body
+    html += '<tbody>\n';
+    for (let r = 1; r < rows.length; r++) {
+      html += '<tr>\n';
+      for (const cell of rows[r]) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<td>${formattedCell}</td>\n`;
+      }
+      html += '</tr>\n';
+    }
+    html += '</tbody>\n</table>\n';
+    
+    return { html, nextIndex: i };
+  };
+
+  const parseRSTTable = (lines: string[], startIndex: number): { html: string; nextIndex: number } => {
+    // This handles more complex grid tables with +---+ borders
+    const tableLines: string[] = [];
+    let i = startIndex;
+    
+    // Find the start of the table (line with +---+ pattern)
+    while (i < lines.length && !lines[i].includes('+---')) {
+      i++;
+    }
+    
+    if (i >= lines.length) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Collect table lines
+    while (i < lines.length && (lines[i].includes('+') || lines[i].includes('|'))) {
+      tableLines.push(lines[i]);
+      i++;
+    }
+    
+    if (tableLines.length < 3) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Parse grid table
+    const rows: string[][] = [];
+    for (const line of tableLines) {
+      if (line.includes('|')) {
+        // Remove borders and split by |
+        const content = line.replace(/^\+\s*\|\s*|\s*\|\s*\+$/g, '').replace(/\s*\|\s*/g, '|');
+        const cells = content.split('|').map(cell => cell.trim());
+        if (cells.length > 0) {
+          rows.push(cells);
+        }
+      }
+    }
+    
+    if (rows.length === 0) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Generate HTML table
+    let html = '<table class="rst-table">\n';
+    
+    // Check if there's a header separator
+    let hasHeader = false;
+    let headerRowIndex = 0;
+    
+    for (let j = 0; j < tableLines.length; j++) {
+      if (tableLines[j].includes('+') && tableLines[j].match(/\+=+/)) {
+        hasHeader = true;
+        headerRowIndex = j - 1;
+        break;
+      }
+    }
+    
+    // Generate header
+    if (hasHeader && headerRowIndex >= 0 && headerRowIndex < rows.length) {
+      html += '<thead>\n<tr>\n';
+      for (const cell of rows[headerRowIndex]) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<th>${formattedCell}</th>\n`;
+      }
+      html += '</tr>\n</thead>\n';
+      
+      // Skip header row in body
+      rows.splice(headerRowIndex, 1);
+    }
+    
+    // Generate body
+    html += '<tbody>\n';
+    for (const row of rows) {
+      html += '<tr>\n';
+      for (const cell of row) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<td>${formattedCell}</td>\n`;
+      }
+      html += '</tr>\n';
+    }
+    html += '</tbody>\n</table>\n';
+    
+    return { html, nextIndex: i };
+  };
+
+  const parseRST = (text: string): string => {
+    // Convert RST to HTML while preserving math formulas
+    const lines = text.split('\n');
+    const output: string[] = [];
+    let i = 0;
+    let headingCounter = 0;
+    
+    while (i < lines.length) {
+      const line = lines[i];
+      const nextLine = lines[i + 1];
+      
+      // Handle RST tables (grid tables)
+      if (line.includes('+') && line.includes('-')) {
+        const tableResult = parseRSTTable(lines, i);
+        if (tableResult.html) {
+          output.push(tableResult.html);
+          i = tableResult.nextIndex;
+          continue;
+        }
+      }
+      
+      // Handle simple tables (with | separators)
+      if (line.includes('|') && line.trim().startsWith('|')) {
+        const tableResult = parseSimpleTable(lines, i);
+        if (tableResult.html) {
+          output.push(tableResult.html);
+          i = tableResult.nextIndex;
+          continue;
+        }
+      }
+      
+      // Handle headers with underlines - this is the main RST heading format
+      if (nextLine && (nextLine.startsWith('=') || nextLine.startsWith('-') || nextLine.startsWith('~') || nextLine.startsWith('^')) && 
+          nextLine.trim().length > 0) {
+        // Check if it's a valid underline (all same character)
+        const underlineChar = nextLine.trim()[0];
+        if (nextLine.trim() === underlineChar.repeat(nextLine.trim().length)) {
+          // Determine header level based on underline character
+          let headerLevel = 2; // default for =
+          if (underlineChar === '-') headerLevel = 3;
+          else if (underlineChar === '~') headerLevel = 4;
+          else if (underlineChar === '^') headerLevel = 5;
+          
+          const headingText = line.trim();
+          
+          // Convert heading text to slug format for meaningful IDs
+          const headingSlug = headingText.toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+            .replace(/\s+/g, '-'); // Replace spaces with hyphens
+          
+          const headingId = `heading-${headingSlug}`;
+          output.push(`<h${headerLevel} id="${headingId}">${headingText}</h${headerLevel}>`);
+          i += 2; // Skip the underline
+          continue;
+        }
+      }
+      
+      // Handle lists - preserve indentation and create proper nested structures
+      if (line.trim().match(/^(\d+\.|\*|\-)\s/)) {
+        const isNumbered = line.trim().match(/^\d+\./);
+        const tag = isNumbered ? 'ol' : 'ul';
+        
+        // Parse the entire list
+        const listItems: string[] = [];
+        let listIndent = line.match(/^(\s*)/)?.[1].length || 0;
+        
+        while (i < lines.length && lines[i].trim()) {
+          const listLine = lines[i];
+          if (listLine.trim().match(/^(\d+\.|\*|\-)\s/)) {
+            let itemContent = listLine.trim().replace(/^(\d+\.|\*|\-)\s/, '');
+            
+            // Apply RST formatting to list items
+            itemContent = itemContent
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+              .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
+              .replace(/`(.*?)`/g, '<code>$1</code>'); // Inline code
+            
+            listItems.push(`<li>${itemContent}</li>`);
+          } else if (listLine.trim()) {
+            // Continuation of list item - apply formatting
+            let continuationContent = listLine.trim();
+            continuationContent = continuationContent
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+              .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
+              .replace(/`(.*?)`/g, '<code>$1</code>'); // Inline code
+            
+            listItems[listItems.length - 1] = listItems[listItems.length - 1].replace('</li>', ` ${continuationContent}</li>`);
+          } else {
+            break;
+          }
+          i++;
+        }
+        
+        output.push(`<${tag}>${listItems.join('')}</${tag}>`);
+        continue;
+      }
+      
+      // Handle regular paragraphs
+      if (line.trim()) {
+        let processedLine = line.trim();
+        
+        // Process the entire line to fix math formulas
+        processedLine = processedLine
+          // Fix broken display math formulas first
+          .replace(/\$\$([^$]*(?:\$\$[^$]*\$\$)*[^$]*)\$\$/g, (match) => {
+            // Remove extra $$ and fix the formula
+            let formula = match.replace(/\$\$/g, '');
+            // Fix common LaTeX syntax issues
+            formula = formula
+              .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '\\frac{$1}{$2}')
+              .replace(/\^([^\s\}]+)/g, '^{$1}')
+              .replace(/_\{([^}]*)\}/g, '_{$1}')
+              .replace(/\{([^\}]+)\}/g, '{$1}');
+            return `$$${formula}$$`;
+          })
+          // Process RST formatting
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+          .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
+          .replace(/`(.*?)`/g, '<code>$1</code>'); // Inline code
+        
+        output.push(`<p>${processedLine}</p>`);
+      }
+      
+      i++;
+    }
+    
+    // Post-process to combine broken math formulas
+    let result = output.join('\n');
+    
+    // Fix broken display math with missing closing
+    result = result.replace(/\$\$([^$]*\$\$[^$]*\$\$)/g, (match) => {
+      const formula = match.replace(/\$\$/g, '');
+      return `$$${formula}$$`;
+    });
+    
+    return result;
+  };
+
   if (loading) {
     return <div className={styles.loading}>Loading books...</div>;
   }
@@ -159,36 +451,81 @@ export default function Books() {
         <div className={styles.contentSection}>
           <aside className={styles.tocAside}>
             {showTOC && selectedBook && (
-              <TableOfContents 
-                content={selectedBook.content || []}
-                onSectionClick={() => {}} // Books don't have section navigation yet
-              />
+              <BookTableOfContents book={selectedBook} />
             )}
           </aside>
 
           <main className={styles.mainContent}>
-            <button className={styles.backButton} onClick={handleBackToList}>
-              ← Back to Books
-            </button>
-            
             <article className={styles.article}>
-              <div className={styles.articleHeader}>
-                <h1>{selectedBook.title}</h1>
-                <p className={styles.articleMeta}>
-                  by {selectedBook.author} • {selectedBook.date}
-                </p>
-                <div className={styles.articleTags}>
-                  {selectedBook.tags.map(tag => (
-                    <span key={tag} className={styles.tag}>
-                      {tag}
-                    </span>
-                  ))}
+              <header className={styles.articleHeader}>
+                <h1 className={styles.articleTitle}>{selectedBook.title}</h1>
+                <div className={styles.articleMeta}>
+                  <span className={styles.articleAuthor}>
+                    by {selectedBook.author}
+                  </span>
+                  <time className={styles.articleDate} dateTime={selectedBook.date}>
+                    {new Date(selectedBook.date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </time>
                 </div>
-              </div>
+                {selectedBook.tags && selectedBook.tags.length > 0 && (
+                  <div className={styles.articleTags}>
+                    {selectedBook.tags.map(tag => (
+                      <span key={tag} className={styles.articleTag}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {selectedBook.description && (
+                  <p className={styles.articleDescription}>{selectedBook.description}</p>
+                )}
+              </header>
 
-              {renderedContent && (
-                <MathRenderer content={renderedContent} />
-              )}
+              <div className={styles.articleContent}>
+                {/* Render introduction from index.rst */}
+                {selectedBook.content && selectedBook.content.length > 0 && (
+                  <section className={styles.bookSection}>
+                    <h2>Introduction</h2>
+                    {selectedBook.content.map((item, index) => {
+                      if (item.type === 'text') {
+                        const htmlContent = parseRST(item.content);
+                        
+                        return (
+                          <MathRenderer 
+                            key={index} 
+                            content={htmlContent}
+                          />
+                        );
+                      }
+                      return null;
+                    })}
+                  </section>
+                )}
+
+                {/* Render each section */}
+                {selectedBook.sections && selectedBook.sections.map((section) => (
+                  <section key={section.id} id={`section-${section.id}`} className={styles.bookSection}>
+                    <h2>{section.title}</h2>
+                    {section.content && section.content.map((item, index) => {
+                      if (item.type === 'text') {
+                        const htmlContent = parseRST(item.content);
+                        
+                        return (
+                          <MathRenderer 
+                            key={index} 
+                            content={htmlContent}
+                          />
+                        );
+                      }
+                      return null;
+                    })}
+                  </section>
+                ))}
+              </div>
             </article>
           </main>
         </div>

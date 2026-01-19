@@ -47,7 +47,19 @@ export default function BookGrid({ books, onBookClick }: BookGridProps) {
   return (
     <div className={styles.grid}>
       {books.map((book) => (
-        <div key={book.id} className={styles.bookCard}>
+        <div 
+          key={book.id} 
+          className={styles.bookCard}
+          onClick={() => handleBookClick(book)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleBookClick(book);
+            }
+          }}
+        >
           <div className={styles.bookCover}>
             {book.coverImage ? (
               <img src={book.coverImage} alt={book.title} />
