@@ -103,28 +103,49 @@ export default function Home() {
     handleSearch(tag);
   };
 
-  const renderTagCategory = (title: string, tags: TagData[]) => {
-    if (tags.length === 0) return null;
+  const renderTagCloud = () => {
+    // Combine all tags from different content types
+    const allTags = new Map<string, number>();
+    
+    articlesTags.forEach(tag => {
+      allTags.set(tag.name, (allTags.get(tag.name) || 0) + tag.count);
+    });
+    
+    snippetsTags.forEach(tag => {
+      allTags.set(tag.name, (allTags.get(tag.name) || 0) + tag.count);
+    });
+    
+    projectsTags.forEach(tag => {
+      allTags.set(tag.name, (allTags.get(tag.name) || 0) + tag.count);
+    });
+    
+    booksTags.forEach(tag => {
+      allTags.set(tag.name, (allTags.get(tag.name) || 0) + tag.count);
+    });
+    
+    // Convert to array and sort by count (descending)
+    const sortedTags = Array.from(allTags.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+    
+    if (sortedTags.length === 0) return null;
     
     return (
-      <div className={styles.tagCategory}>
-        <h3 className={styles.categoryTitle}>{title}</h3>
-        <div className={styles.tagCloud}>
-          {tags.map((tag) => {
-            const fontSize = Math.max(0.8, Math.min(1.5, 0.8 + (tag.count / 10) * 0.7));
-            return (
-              <button
-                key={tag.name}
-                onClick={() => handleTagClick(tag.name)}
-                className={styles.tag}
-                style={{ fontSize: `${fontSize}rem` }}
-                aria-label={`Search for ${tag.name}`}
-              >
-                {tag.name} ({tag.count})
-              </button>
-            );
-          })}
-        </div>
+      <div className={styles.tagCloud}>
+        {sortedTags.map((tag) => {
+          const fontSize = Math.max(0.8, Math.min(1.5, 0.8 + (tag.count / 20) * 0.7));
+          return (
+            <button
+              key={tag.name}
+              onClick={() => handleTagClick(tag.name)}
+              className={styles.tag}
+              style={{ fontSize: `${fontSize}rem` }}
+              aria-label={`Search for ${tag.name}`}
+            >
+              {tag.name} ({tag.count})
+            </button>
+          );
+        })}
       </div>
     );
   };
@@ -145,12 +166,7 @@ export default function Home() {
       ) : (
         <section className={styles.tagsSection}>
           <h2 className={styles.sectionTitle}>Browse by Tags</h2>
-          <div className={styles.tagCategories}>
-            {renderTagCategory('Articles', articlesTags)}
-            {renderTagCategory('Snippets', snippetsTags)}
-            {renderTagCategory('Projects', projectsTags)}
-            {renderTagCategory('Books', booksTags)}
-          </div>
+          {renderTagCloud()}
         </section>
       )}
 
