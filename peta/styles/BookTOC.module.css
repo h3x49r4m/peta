@@ -36,6 +36,30 @@
   background-color: var(--surface-hover);
 }
 
+/* Header specific styles */
+.headerList {
+  margin-left: var(--spacing-3);
+  margin-top: var(--spacing-2);
+  list-style: none;
+  padding: 0;
+}
+
+.headerItem {
+  margin-bottom: var(--spacing-1);
+}
+
+.headerLink {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.headerLink:hover {
+  color: var(--primary-color);
+  background: rgba(9, 105, 218, 0.05);
+}
+
 /* Snippet specific styles */
 .snippetList {
   margin-left: var(--spacing-4);

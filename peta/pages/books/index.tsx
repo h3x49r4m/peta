@@ -81,12 +81,29 @@ export default function Books({ initialBookId }: { initialBookId?: string }) {
       const sectionIndex = selectedBook.sections.findIndex(s => s.id === sectionId);
       if (sectionIndex !== -1) {
         setCurrentSectionId(sectionId);
+        
+        // Handle hash after section is loaded
+        if (router.asPath.includes('#')) {
+          const hash = router.asPath.split('#')[1];
+          setTimeout(() => {
+            const element = document.getElementById(hash);
+            if (element) {
+              const offset = 100;
+              const elementPosition = element.getBoundingClientRect().top;
+              const offsetPosition = elementPosition + window.pageYOffset - offset;
+              window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+              });
+            }
+          }, 500);
+        }
       }
     } else if (selectedBook && selectedBook.sections.length > 0) {
       // Default to 'index' section if no section parameter
       setCurrentSectionId('index');
     }
-  }, [selectedBook, router.query.section]);
+  }, [selectedBook, router.query.section, router.asPath]);
 
   useEffect(() => {
     // Reset selected book only when navigating to the main books page without parameters
@@ -509,7 +526,7 @@ useEffect(() => {
     return { html, nextIndex: i };
   };
 
-  const parseRST = (text: string, snippetId?: string): string => {
+  const parseRST = (text: string, snippetId?: string, sectionId?: string): string => {
     // Convert RST to HTML while preserving math formulas
     const lines = text.split('\n');
     const output: string[] = [];
@@ -520,7 +537,34 @@ useEffect(() => {
       const line = lines[i];
       const nextLine = lines[i + 1];
       
-      // Handle RST tables (grid tables)
+      // Handle headers with underlines - this is the main RST heading format (check FIRST!)
+      if (nextLine && (nextLine.startsWith('=') || nextLine.startsWith('-') || nextLine.startsWith('~') || nextLine.startsWith('^')) && 
+          nextLine.trim().length > 0) {
+        // Check if it's a valid underline (all same character)
+        const underlineChar = nextLine.trim()[0];
+        if (nextLine.trim() === underlineChar.repeat(nextLine.trim().length)) {
+          // Determine header level based on underline character
+          let headerLevel = 2; // default for =
+          if (underlineChar === '-') headerLevel = 2;  // subsection
+          else if (underlineChar === '~') headerLevel = 3;  // subsubsection
+          else if (underlineChar === '^') headerLevel = 4;
+          
+          const headingText = line.trim();
+          
+          // Convert heading text to slug format for meaningful IDs
+          const headingSlug = headingText.toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+            .replace(/\s+/g, '-'); // Replace spaces with hyphens
+          
+          // Use section-based ID for section headers to match BookTOC format
+          const headingId = snippetId ? `snippet-${snippetId}-${headingSlug}` : `${sectionId || 'section'}-${headingSlug}`;
+          output.push(`<h${headerLevel} id="${headingId}">${headingText}</h${headerLevel}>`);
+          i += 2; // Skip the underline
+          continue;
+        }
+      }
+      
+      // Handle RST tables (grid tables) - check after headers
       if (line.includes('+') && line.includes('-')) {
         const tableResult = parseRSTTable(lines, i);
         if (tableResult.html) {
@@ -541,38 +585,12 @@ useEffect(() => {
       }
       
       // Handle RST simple tables (with column headers and dash separators)
-      if (nextLine && nextLine.trim().match(/^[=-]+(\s+[=-]+)*$/)) {
+      // Only treat as table if the current line has multiple columns (spaces between words)
+      if (nextLine && nextLine.trim().match(/^[=-]+(\s+[=-]+)*$/) && line.trim().includes('  ')) {
         const tableResult = parseRstSimpleTable(lines, i);
         if (tableResult.html) {
           output.push(tableResult.html);
           i = tableResult.nextIndex;
-          continue;
-        }
-      }
-      
-      // Handle headers with underlines - this is the main RST heading format
-      if (nextLine && (nextLine.startsWith('=') || nextLine.startsWith('-') || nextLine.startsWith('~') || nextLine.startsWith('^')) && 
-          nextLine.trim().length > 0) {
-        // Check if it's a valid underline (all same character)
-        const underlineChar = nextLine.trim()[0];
-        if (nextLine.trim() === underlineChar.repeat(nextLine.trim().length)) {
-          // Determine header level based on underline character
-          let headerLevel = 2; // default for =
-          if (underlineChar === '-') headerLevel = 3;
-          else if (underlineChar === '~') headerLevel = 4;
-          else if (underlineChar === '^') headerLevel = 5;
-          
-          const headingText = line.trim();
-          
-          // Convert heading text to slug format for meaningful IDs
-          const headingSlug = headingText.toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-            .replace(/\s+/g, '-'); // Replace spaces with hyphens
-          
-          // Use snippet- prefix for snippet headers to match BookTOC format
-          const headingId = snippetId ? `snippet-${snippetId}-${headingSlug}` : `heading-${headingSlug}`;
-          output.push(`<h${headerLevel} id="${headingId}">${headingText}</h${headerLevel}>`);
-          i += 2; // Skip the underline
           continue;
         }
       }
@@ -765,7 +783,7 @@ const section = sectionIndex !== -1 ? selectedBook.sections[sectionIndex] : sele
                       {section.content ? (
                         section.content.map((item, index) => {
                           if (item.type === 'text') {
-                            const htmlContent = parseRST(item.content, section.id);
+                            const htmlContent = parseRST(item.content, undefined, section.id);
                             
                             return (
                               <MathRenderer 
