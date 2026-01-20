@@ -405,3 +405,83 @@
     gap: var(--spacing-2);
   }
 }
+
+/* Snippet Card Styles - Same as Articles.module.css */
+.snippetCard {
+  background-color: var(--surface-color, #f6f8fa);
+  border: 1px solid var(--border-color, #e1e5e9);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-5);
+  margin: var(--spacing-6) 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  width: 100%; /* Ensure snippet cards use full width */
+}
+
+.snippetHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--border-color, #e1e5e9);
+}
+
+.snippetHeader h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.snippetType {
+  background-color: var(--primary-color, #0070f3);
+  color: white;
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.snippetContent {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.snippetRef {
+  background-color: var(--surface-color, #f6f8fa);
+  border: 1px solid var(--border-color, #e1e5e9);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-4);
+  margin: var(--spacing-4) 0;
+  font-style: italic;
+}
+
+/* Expanded state for snippets with headers */
+.snippetCard.expanded .snippetContent {
+  max-height: none;
+}
+
+.snippetCard .snippetSubHeader {
+  margin-left: var(--spacing-4);
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--border-color, #e1e5e9);
+}
+
+.snippetCard .snippetSubHeader h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Responsive styles for snippets */
+@media (max-width: 768px) {
+  .snippetHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+}

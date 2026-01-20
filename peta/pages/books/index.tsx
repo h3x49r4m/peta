@@ -45,7 +45,9 @@ export default function Books({ initialBookId }: { initialBookId?: string }) {
     const [showTOC, setShowTOC] = useState(false);
     const [showBackToTop, setShowBackToTop] = useState(false);
     const [loadedSections, setLoadedSections] = useState<Set<string>>(new Set());
-      const router = useRouter();
+  const [snippets, setSnippets] = useState<any[]>([]);
+  const [snippetsLoading, setSnippetsLoading] = useState(true);
+  const router = useRouter();
   
   // Get the book ID from router query (works on both server and client)
   const bookId = (router.query.book as string) || initialBookId;
@@ -168,16 +170,20 @@ useEffect(() => {
 
   const loadBooksContent = async () => {
     try {
-      const [booksResponse, tagsResponse] = await Promise.all([
+      const [booksResponse, tagsResponse, snippetsResponse] = await Promise.all([
         fetch('/api/content/book'),
-        fetch('/api/tags?type=book')
+        fetch('/api/tags?type=book'),
+        fetch('/api/content/snippet')
       ]);
       
       const booksData = await booksResponse.json();
       const tagsData = await tagsResponse.json();
+      const snippetsData = await snippetsResponse.json();
       
       setBooks(booksData);
       setTags(tagsData);
+      setSnippets(snippetsData);
+      setSnippetsLoading(false);
       return booksData; // Return books for immediate use
     } catch (error) {
       console.error('Error loading books:', error);
@@ -489,7 +495,7 @@ useEffect(() => {
     return { html, nextIndex: i };
   };
 
-  const parseRST = (text: string): string => {
+  const parseRST = (text: string, snippetId?: string): string => {
     // Convert RST to HTML while preserving math formulas
     const lines = text.split('\n');
     const output: string[] = [];
@@ -549,7 +555,8 @@ useEffect(() => {
             .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
             .replace(/\s+/g, '-'); // Replace spaces with hyphens
           
-          const headingId = `heading-${headingSlug}`;
+          // Use snippet- prefix for snippet headers to match BookTOC format
+          const headingId = snippetId ? `snippet-${snippetId}-${headingSlug}` : `heading-${headingSlug}`;
           output.push(`<h${headerLevel} id="${headingId}">${headingText}</h${headerLevel}>`);
           i += 2; // Skip the underline
           continue;
@@ -668,7 +675,9 @@ useEffect(() => {
                 book={{
                   ...selectedBook,
                   sections: selectedBook.sections || []
-                }} 
+                }}
+                snippets={snippets}
+                snippetsLoading={snippetsLoading}
               />
             )}
           </aside>
@@ -710,7 +719,7 @@ useEffect(() => {
                     <h2>Introduction</h2>
                     {selectedBook.content.map((item, index) => {
                       if (item.type === 'text') {
-                        const htmlContent = parseRST(item.content);
+                        const htmlContent = parseRST(item.content, 'introduction');
                         
                         return (
                           <MathRenderer 
@@ -752,7 +761,7 @@ useEffect(() => {
                       {isLoaded && section.content ? (
                         section.content.map((item, index) => {
                           if (item.type === 'text') {
-                            const htmlContent = parseRST(item.content);
+                            const htmlContent = parseRST(item.content, section.id);
                             
                             return (
                               <MathRenderer 
@@ -767,6 +776,124 @@ useEffect(() => {
                                 code={item.content}
                                 language={item.language || 'text'}
                               />
+                            );
+                          } else if (item.type === 'snippet-card-ref') {
+                            // Find the snippet from loaded snippets
+                            const snippetId = item.content;
+                            const snippetTitle = snippetId.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+                            
+                            // Try to find the snippet in the loaded snippets
+                            const snippet = snippets.find((s: any) => {
+                              // Check by id
+                              if (s.id === snippetId) return true;
+                              
+                              // Check by snippet_id
+                              if (s.frontmatter?.snippet_id === snippetId) return true;
+                              
+                              // Check by title (exact match)
+                              if (s.frontmatter?.title === snippetId) return true;
+                              if (s.title === snippetId) return true;
+                              
+                              // Check by slugified title
+                              const snippetSlug = (s.frontmatter?.title || s.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                              if (snippetSlug === snippetId) return true;
+                              
+                              // Check partial match
+                              const title = (s.frontmatter?.title || s.title || '').toLowerCase();
+                              const searchTerm = snippetId.toLowerCase().replace(/-/g, ' ');
+                              if (title.includes(searchTerm) || searchTerm.includes(title)) return true;
+                              
+                              return false;
+                            });
+                            
+                            if (snippet) {
+                              return (
+                                <div key={index} className={styles.snippetCard} id={`snippet-${snippetId}`}>
+                                  <div className={styles.snippetHeader}>
+                                    <h3>{snippet.frontmatter?.title || snippet.title}</h3>
+                                    <span className={styles.snippetType}>Snippet</span>
+                                  </div>
+                                  <div className={styles.snippetContent}>
+                                    {snippet.content?.map((c: any, idx: number) => {
+                                      if (c.type === 'text') {
+                                        const htmlContent = parseRST(c.content, snippetId);
+                                        return <MathRenderer key={idx} content={htmlContent} />;
+                                      } else if (c.type === 'code-block') {
+                                        return (
+                                          <CodeBlock 
+                                            key={idx}
+                                            code={c.content}
+                                            language={c.language || 'text'}
+                                          />
+                                        );
+                                      }
+                                      return null;
+                                    }) || <em>No content available</em>}
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              // Show not found message if snippet is still loading or not found
+                              if (snippetsLoading) {
+                                return (
+                                  <div key={index} className={styles.snippetCard}>
+                                    <div className={styles.snippetHeader}>
+                                      <h3>Snippet: {snippetTitle}</h3>
+                                      <span className={styles.snippetType}>Snippet</span>
+                                    </div>
+                                    <div className={styles.snippetContent}>
+                                      <em>Loading {snippetId}...</em>
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div key={index} className={styles.snippetCard}>
+                                    <div className={styles.snippetHeader}>
+                                      <h3>Snippet not found</h3>
+                                      <span className={styles.snippetType}>Error</span>
+                                    </div>
+                                    <div className={styles.snippetContent}>
+                                      <em>Snippet not found: {snippetId}</em>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            }
+                          } else if (item.type === 'embedded-snippet') {
+                            // Render the embedded snippet directly
+                            const snippetTitle = item.title || item.id;
+                            const formattedTitle = snippetTitle.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+                            
+                            const snippetId = item.id || `snippet-${index}`;
+                            
+                            return (
+                              <div key={index} className={styles.snippetCard} id={snippetId}>
+                                <div className={styles.snippetHeader}>
+                                  <h3>{formattedTitle}</h3>
+                                  <span className={styles.snippetType}>Snippet</span>
+                                </div>
+                                <div className={styles.snippetContent}>
+                                  {item.content && Array.isArray(item.content) ? 
+                                    item.content.map((c: any, idx: number) => {
+                                      if (c.type === 'text') {
+                                        const htmlContent = parseRST(c.content, snippetId);
+                                        return <MathRenderer key={idx} content={htmlContent} />;
+                                      } else if (c.type === 'code-block') {
+                                        return (
+                                          <CodeBlock 
+                                            key={idx}
+                                            code={c.content}
+                                            language={c.language || 'text'}
+                                          />
+                                        );
+                                      }
+                                      return null;
+                                    }) : 
+                                    <em>No content available</em>
+                                  }
+                                </div>
+                              </div>
                             );
                           }
                           return null;

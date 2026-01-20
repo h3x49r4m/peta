@@ -18,14 +18,104 @@ interface BookTOCProps {
     coverImage?: string;
     sections: BookSection[];
   };
+  snippets?: any[];
+  snippetsLoading?: boolean;
 }
 
-export default function BookTOC({ book }: BookTOCProps) {
+export default function BookTOC({ book, snippets = [], snippetsLoading = false }: BookTOCProps) {
   const [activeId, setActiveId] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [expandedSnippets, setExpandedSnippets] = useState<Set<string>>(new Set());
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
+    // Handle initial hash scroll
+    const handleHashScroll = () => {
+      const hash = window.location.hash.slice(1); // Remove the # character
+      if (hash) {
+        // Check if it's a snippet hash
+        if (hash.startsWith('snippet-')) {
+          // Check if it's a snippet subheader (has multiple dashes after snippet-)
+          const hashParts = hash.split('-');
+          if (hashParts.length > 2) {
+            // It's a subheader, find which snippet it belongs to
+            // Need to handle snippet IDs that may contain hyphens
+            const allSnippets = getAllSnippets();
+            let snippet = null;
+            
+            // Find the snippet by checking if the hash starts with 'snippet-{snippetId}-'
+            for (const s of allSnippets) {
+              if (hash.startsWith(`snippet-${s.id}-`)) {
+                snippet = s;
+                break;
+              }
+            }
+            
+            if (snippet) {
+              // Ensure the section containing this snippet is loaded
+              const sectionPlaceholder = document.getElementById(`section-placeholder-${snippet.sectionId}`);
+              if (sectionPlaceholder) {
+                // Manually trigger the intersection observer by scrolling the placeholder into view briefly
+                const originalScroll = window.pageYOffset;
+                sectionPlaceholder.scrollIntoView({ behavior: 'auto', block: 'start' });
+                setTimeout(() => {
+                  window.scrollTo(0, originalScroll);
+                  // Now try to scroll to the subheader
+                  setTimeout(() => {
+                    const element = document.getElementById(hash);
+                    if (element) {
+                      const offset = 100;
+                      const elementPosition = element.getBoundingClientRect().top;
+                      const offsetPosition = elementPosition + window.pageYOffset - offset;
+                      window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                      });
+                    }
+                  }, 300);
+                }, 100);
+              } else {
+                // Section might already be loaded, try scrolling directly
+                setTimeout(() => {
+                  const element = document.getElementById(hash);
+                  if (element) {
+                    const offset = 100;
+                    const elementPosition = element.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - offset;
+                    window.scrollTo({
+                      top: offsetPosition,
+                      behavior: 'smooth'
+                    });
+                  }
+                }, 300);
+              }
+            }
+          } else {
+            // It's a main snippet
+            const snippetId = hash.replace('snippet-', '');
+            setTimeout(() => {
+              scrollToSnippet(snippetId);
+            }, 100); // Small delay to ensure DOM is ready
+          }
+        } else {
+          // Regular section or heading scroll
+          const element = document.getElementById(hash);
+          if (element) {
+            const offset = 100;
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - offset;
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }
+      }
+    };
+
+    // Initial hash scroll
+    setTimeout(handleHashScroll, 500); // Wait longer for content to render
+
     // Add IDs to sections in the DOM
     const addIdsToDOM = () => {
       book.sections.forEach((section) => {
@@ -78,16 +168,115 @@ export default function BookTOC({ book }: BookTOCProps) {
       }
     };
   }, [book.sections]);
-
-  const scrollToSection = (sectionId: string) => {
-    // First try to find the actual section (if already loaded)
-    let element = document.getElementById(`section-${sectionId}`);
-    
-    // If not found, try the placeholder (if not yet loaded)
-    if (!element) {
-      element = document.getElementById(`section-placeholder-${sectionId}`);
-    }
-    
+  
+    useEffect(() => {
+      // Listen for hash changes
+      const handleHashChange = () => {
+        const hash = window.location.hash.slice(1);
+        if (hash) {
+          if (hash.startsWith('snippet-')) {
+            // Check if it's a snippet subheader (has multiple dashes after snippet-)
+            const hashParts = hash.split('-');
+            if (hashParts.length > 2) {
+            // It's a subheader, find which snippet it belongs to
+            // Need to handle snippet IDs that may contain hyphens
+            const allSnippets = getAllSnippets();
+            let snippet = null;
+            
+            // Find the snippet by checking if the hash starts with 'snippet-{snippetId}-'
+            for (const s of allSnippets) {
+              if (hash.startsWith(`snippet-${s.id}-`)) {
+                snippet = s;
+                console.log(`Found snippet ${s.id} in section ${s.sectionId}`);
+                break;
+              }
+            }
+            
+            if (snippet) {
+              // Find which section contains this snippet
+              console.log(`Looking for section-placeholder-${snippet.sectionId}`);
+              const sectionPlaceholder = document.getElementById(`section-placeholder-${snippet.sectionId}`);
+              console.log(`Section placeholder found:`, !!sectionPlaceholder);
+              
+              if (sectionPlaceholder) {
+                // Load the section first
+                console.log('Loading section first');
+                const originalScroll = window.pageYOffset;
+                sectionPlaceholder.scrollIntoView({ behavior: 'auto', block: 'start' });
+                setTimeout(() => {
+                  window.scrollTo(0, originalScroll);
+                  // Now try to scroll to the header
+                  setTimeout(() => {
+                    console.log(`Looking for element with ID: ${hash}`);
+                    const element = document.getElementById(hash);
+                    console.log(`Element found:`, !!element);
+                    if (element) {
+                      console.log('Scrolling to element');
+                      const offset = 100;
+                      const elementPosition = element.getBoundingClientRect().top;
+                      const offsetPosition = elementPosition + window.pageYOffset - offset;
+                      window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                      });
+                    } else {
+                      console.error(`Element not found: ${hash}`);
+                    }
+                  }, 500);
+                }, 100);
+              } else {
+                // Section might already be loaded, scroll directly
+                console.log('Section might already be loaded');
+                setTimeout(() => {
+                  console.log(`Looking for element with ID: ${hash}`);
+                  const element = document.getElementById(hash);
+                  console.log(`Element found:`, !!element);
+                  if (element) {
+                    console.log('Scrolling to element');
+                    const offset = 100;
+                    const elementPosition = element.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - offset;
+                    window.scrollTo({
+                      top: offsetPosition,
+                      behavior: 'smooth'
+                    });
+                  } else {
+                    console.error(`Element not found: ${hash}`);
+                  }
+                }, 100);
+              }
+            } else {
+              console.error('Snippet not found for hash:', hash);
+            }
+          }
+            } else {
+              // It's a main snippet
+              const snippetId = hash.replace('snippet-', '');
+              setTimeout(() => {
+                scrollToSnippet(snippetId);
+              }, 100);
+            }
+          } else {
+            const element = document.getElementById(hash);
+            if (element) {
+              const offset = 100;
+              const elementPosition = element.getBoundingClientRect().top;
+              const offsetPosition = elementPosition + window.pageYOffset - offset;
+              window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+              });
+            }
+          }
+      };
+  
+      window.addEventListener('hashchange', handleHashChange);
+      return () => {
+        window.removeEventListener('hashchange', handleHashChange);
+      };
+    }, []);
+  
+    const scrollToSection = (sectionId: string) => {    const element = document.getElementById(`section-${sectionId}`);
     if (element) {
       const offset = 100; // Header offset
       const elementPosition = element.getBoundingClientRect().top;
@@ -100,6 +289,212 @@ export default function BookTOC({ book }: BookTOCProps) {
     }
   };
 
+  const scrollToSnippet = (snippetId: string) => {
+    // Find which section contains this snippet
+    const snippet = getAllSnippets().find(s => s.id === snippetId);
+    if (!snippet) {
+      console.warn(`Snippet not found in TOC: ${snippetId}`);
+      return;
+    }
+    
+    // Ensure the section containing the snippet is loaded
+    const sectionPlaceholder = document.getElementById(`section-placeholder-${snippet.sectionId}`);
+    if (sectionPlaceholder) {
+      // Trigger section load by scrolling to it first
+      sectionPlaceholder.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Try multiple times to find the element as it might be loading
+    let attempts = 0;
+    const maxAttempts = 20;
+    const retryDelay = 300;
+    
+    const tryScroll = () => {
+      attempts++;
+      const element = document.getElementById(`snippet-${snippetId}`);
+      
+      if (element) {
+        // Check if the element is actually visible (not hidden by opacity 0)
+        const computedStyle = window.getComputedStyle(element);
+        const isVisible = computedStyle.opacity !== '0' && computedStyle.display !== 'none';
+        
+        if (isVisible) {
+          const offset = 100; // Header offset
+          const elementPosition = element.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        } else if (attempts < maxAttempts) {
+          // Element exists but not visible yet, retry
+          setTimeout(tryScroll, retryDelay);
+        }
+      } else if (attempts < maxAttempts) {
+        // Element not found yet, retry after a delay
+        setTimeout(tryScroll, retryDelay);
+      } else {
+        console.warn(`Snippet element not found or not visible after ${maxAttempts} attempts: snippet-${snippetId}`);
+      }
+    };
+    
+    // Start trying after a small delay to allow section to load
+    setTimeout(tryScroll, 200);
+  };
+
+  // Extract snippets from all sections
+  const getAllSnippets = () => {
+    const allSnippets: any[] = [];
+    
+    book.sections.forEach(section => {
+      if (section.content) {
+        section.content.forEach(item => {
+          if (item.type === 'snippet-card-ref') {
+            const snippetId = item.content;
+            
+            // Find the actual snippet
+            const snippet = snippets.find((s: any) => {
+              if (s.id === snippetId) return true;
+              if (s.frontmatter?.snippet_id === snippetId) return true;
+              if (s.frontmatter?.title === snippetId) return true;
+              if (s.title === snippetId) return true;
+              
+              const snippetSlug = (s.frontmatter?.title || s.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              if (snippetSlug === snippetId) return true;
+              
+              const title = (s.frontmatter?.title || s.title || '').toLowerCase();
+              const searchTerm = snippetId.toLowerCase().replace(/-/g, ' ');
+              if (title.includes(searchTerm) || searchTerm.includes(title)) return true;
+              
+              return false;
+            });
+            
+            // Use the actual snippet title if available
+            const snippetTitle = snippet?.frontmatter?.title || snippet?.title || snippetId.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+            
+            // Extract headers from snippet content
+            const snippetChildren: any[] = [];
+            if (snippet && snippet.content) {
+              snippet.content.forEach((c: any) => {
+                if (c.type === 'text') {
+                  const snippetLines = c.content.split('\n');
+                  
+                  for (let j = 0; j < snippetLines.length; j++) {
+                    const snippetLine = snippetLines[j];
+                    const snippetNextLine = snippetLines[j + 1];
+                    
+                    if (snippetNextLine && (snippetNextLine.startsWith('-') || snippetNextLine.startsWith('~')) && 
+                        snippetNextLine.trim().length > 0) {
+                      const underlineChar = snippetNextLine.trim()[0];
+                      if (snippetNextLine.trim() === underlineChar.repeat(snippetNextLine.trim().length)) {
+                        let headerLevel = 3;
+                        if (underlineChar === '~') headerLevel = 4;
+                        
+                        const headingText = snippetLine.trim();
+                        const headingId = `snippet-${snippetId}-${headingText.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-')}`;
+                        
+                        snippetChildren.push({
+                          id: headingId,
+                          title: headingText,
+                          level: headerLevel + 1
+                        });
+                      }
+                    }
+                  }
+                }
+              });
+            }
+            
+            allSnippets.push({
+              id: snippetId,
+              title: `Snippet: ${snippet ? (snippet.frontmatter?.title || snippet.title) : snippetTitle}`,
+              sectionId: section.id,
+              sectionTitle: section.title,
+              children: snippetChildren
+            });
+          } else if (item.type === 'embedded-snippet') {
+            const snippetTitle = item.title || item.id;
+            const formattedTitle = snippetTitle.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+            const snippetId = item.id || `snippet-${Date.now()}`;
+            
+            // Extract headers from embedded snippet content
+            const snippetChildren: any[] = [];
+            if (item.content) {
+              if (Array.isArray(item.content)) {
+                item.content.forEach((c: any) => {
+                  if (c.type === 'text') {
+                    const snippetLines = c.content.split('\n');
+                    
+                    for (let j = 0; j < snippetLines.length; j++) {
+                      const snippetLine = snippetLines[j];
+                      const snippetNextLine = snippetLines[j + 1];
+                      
+                      if (snippetNextLine && (snippetNextLine.startsWith('=') || snippetNextLine.startsWith('-') || snippetNextLine.startsWith('~')) && 
+                          snippetNextLine.trim().length > 0) {
+                        const underlineChar = snippetNextLine.trim()[0];
+                        if (snippetNextLine.trim() === underlineChar.repeat(snippetNextLine.trim().length)) {
+                          let headerLevel = 2;
+                          if (underlineChar === '-') headerLevel = 3;
+                          else if (underlineChar === '~') headerLevel = 4;
+                          
+                          const headingText = snippetLine.trim();
+                          const headingId = `${snippetId}-${headingText.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-')}`;
+                          
+                          snippetChildren.push({
+                            id: headingId,
+                            title: headingText,
+                            level: headerLevel + 1
+                          });
+                        }
+                      }
+                    }
+                  }
+                });
+              } else if (typeof item.content === 'string') {
+                const snippetLines = item.content.split('\n');
+                
+                for (let j = 0; j < snippetLines.length; j++) {
+                  const snippetLine = snippetLines[j];
+                  const snippetNextLine = snippetLines[j + 1];
+                  
+                  if (snippetNextLine && (snippetNextLine.startsWith('=') || snippetNextLine.startsWith('-') || snippetNextLine.startsWith('~')) && 
+                      snippetNextLine.trim().length > 0) {
+                    const underlineChar = snippetNextLine.trim()[0];
+                    if (snippetNextLine.trim() === underlineChar.repeat(snippetNextLine.trim().length)) {
+                      let headerLevel = 2;
+                      if (underlineChar === '-') headerLevel = 3;
+                      else if (underlineChar === '~') headerLevel = 4;
+                      
+                      const headingText = snippetLine.trim();
+                      const headingId = `${snippetId}-${headingText.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-')}`;
+                      
+                      snippetChildren.push({
+                        id: headingId,
+                        title: headingText,
+                        level: headerLevel + 1
+                      });
+                    }
+                  }
+                }
+              }
+            }
+            
+            allSnippets.push({
+              id: snippetId,
+              title: formattedTitle,
+              sectionId: section.id,
+              sectionTitle: section.title,
+              children: snippetChildren
+            });
+          }
+        });
+      }
+    });
+    
+    return allSnippets;
+  };
+
   return (
     <div className={`${styles.bookTOC} ${isExpanded ? styles.expanded : ''}`}>
       {isExpanded && (
@@ -108,24 +503,233 @@ export default function BookTOC({ book }: BookTOCProps) {
             <h3 className={styles.tocTitle}>{book.title}</h3>
           </div>
           <ul className={styles.tocList}>
-            {book.sections.map((section) => (
-              <li 
-                key={section.id} 
-                className={`${styles.tocItem} ${activeId === `section-${section.id}` || activeId === `section-placeholder-${section.id}` ? styles.active : ''}`}
-              >
-                <a 
-                  href={`#section-${section.id}`}
-                  className={styles.tocLink}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.history.pushState(null, '', `#section-${section.id}`);
-                    scrollToSection(section.id);
-                  }}
-                >
-                  {section.title}
-                </a>
-              </li>
-            ))}
+            {book.sections.map((section) => {
+              const sectionSnippets = getAllSnippets().filter(s => s.sectionId === section.id);
+              
+              return (
+                <li key={section.id}>
+                  <div className={styles.sectionGroup}>
+                    <a 
+                      href={`#section-${section.id}`}
+                      className={`${styles.tocLink} ${styles.sectionLink} ${activeId === `section-${section.id}` || activeId === `section-placeholder-${section.id}` ? styles.active : ''}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.history.pushState(null, '', `#section-${section.id}`);
+                        scrollToSection(section.id);
+                      }}
+                    >
+                      {section.title}
+                    </a>
+                    
+                    {sectionSnippets.length > 0 && (
+                      <ul className={styles.snippetList}>
+                        {sectionSnippets.map((snippet) => {
+                          const hasChildren = snippet.children && snippet.children.length > 0;
+                          const isSnippetExpanded = expandedSnippets.has(snippet.id) || activeId.startsWith(`snippet-${snippet.id}`) || activeId.includes(`${snippet.id}-`);
+                          
+                          return (
+                            <li key={snippet.id} className={styles.snippetItem}>
+                              {hasChildren ? (
+                                <button 
+                                  className={`${styles.tocLink} ${styles.snippetLink} ${styles.snippetToggle} ${activeId === `snippet-${snippet.id}` ? styles.active : ''}`}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.history.pushState(null, '', `#snippet-${snippet.id}`);
+                                    
+                                    // Toggle expanded state
+                                    setExpandedSnippets(prev => {
+                                      const newSet = new Set(prev);
+                                      if (newSet.has(snippet.id)) {
+                                        newSet.delete(snippet.id);
+                                      } else {
+                                        newSet.add(snippet.id);
+                                      }
+                                      return newSet;
+                                    });
+                                    
+                                    // Ensure the section containing this snippet is loaded
+                                    const sectionPlaceholder = document.getElementById(`section-placeholder-${snippet.sectionId}`);
+                                    if (sectionPlaceholder) {
+                                      // Manually trigger the intersection observer by scrolling the placeholder into view briefly
+                                      const originalScroll = window.pageYOffset;
+                                      sectionPlaceholder.scrollIntoView({ behavior: 'auto', block: 'start' });
+                                      setTimeout(() => {
+                                        window.scrollTo(0, originalScroll);
+                                        // Now try to scroll to the snippet
+                                        setTimeout(() => {
+                                          const snippetElement = document.getElementById(`snippet-${snippet.id}`);
+                                          if (snippetElement) {
+                                            snippetElement.classList.toggle(styles.expanded);
+                                          }
+                                          scrollToSnippet(snippet.id);
+                                        }, 100);
+                                      }, 100);
+                                    } else {
+                                      // Section might already be loaded
+                                      const snippetElement = document.getElementById(`snippet-${snippet.id}`);
+                                      if (snippetElement) {
+                                        snippetElement.classList.toggle(styles.expanded);
+                                      }
+                                      setTimeout(() => scrollToSnippet(snippet.id), 50);
+                                    }
+                                  }}
+                                >
+                                  <span 
+                                    style={{ 
+                                      display: 'inline-flex', 
+                                      alignItems: 'center', 
+                                      justifyContent: 'center',
+                                      width: '10px', 
+                                      height: '10px',
+                                      borderRadius: '1px',
+                                      backgroundColor: 'var(--primary-color)',
+                                      color: 'white',
+                                      fontSize: '9px',
+                                      fontWeight: 'bold',
+                                      marginRight: '3px',
+                                      transition: 'transform 0.2s ease'
+                                    }}
+                                  >
+                                    {isSnippetExpanded ? '−' : '+'}
+                                  </span>
+                                  <span className={styles.snippetIcon}>📄</span>
+                                  {snippet.title}
+                                </button>
+                              ) : (
+                                <a 
+                                  href={`#snippet-${snippet.id}`}
+                                  className={`${styles.tocLink} ${styles.snippetLink} ${activeId === `snippet-${snippet.id}` ? styles.active : ''}`}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    window.history.pushState(null, '', `#snippet-${snippet.id}`);
+                                    
+                                    // Ensure the section containing this snippet is loaded
+                                    const sectionPlaceholder = document.getElementById(`section-placeholder-${snippet.sectionId}`);
+                                    if (sectionPlaceholder) {
+                                      // Manually trigger the intersection observer by scrolling the placeholder into view briefly
+                                      const originalScroll = window.pageYOffset;
+                                      sectionPlaceholder.scrollIntoView({ behavior: 'auto', block: 'start' });
+                                      setTimeout(() => {
+                                        window.scrollTo(0, originalScroll);
+                                        // Now try to scroll to the snippet
+                                        setTimeout(() => scrollToSnippet(snippet.id), 100);
+                                      }, 100);
+                                    } else {
+                                      // Section might already be loaded, try scrolling directly
+                                      setTimeout(() => scrollToSnippet(snippet.id), 50);
+                                    }
+                                  }}
+                                >
+                                  <span className={styles.snippetIcon}>📄</span>
+                                  {snippet.title}
+                                </a>
+                              )}
+                              {isSnippetExpanded && hasChildren && (
+                                <ul className={styles.snippetSubList}>
+                                  {snippet.children!.map((child: any) => (
+                                    <li key={child.id} className={styles.snippetSubItem}>
+                                      <a 
+                                        href={`#${child.id}`}
+                                        className={`${styles.tocLink} ${styles.snippetSubLink} ${activeId === child.id ? styles.active : ''}`}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          window.history.pushState(null, '', `#${child.id}`);
+                                          
+                                          // Ensure the section containing this snippet is loaded
+                                          const sectionPlaceholder = document.getElementById(`section-placeholder-${snippet.sectionId}`);
+                                          if (sectionPlaceholder) {
+                                            // Manually trigger the intersection observer by scrolling the placeholder into view briefly
+                                            const originalScroll = window.pageYOffset;
+                                            sectionPlaceholder.scrollIntoView({ behavior: 'auto', block: 'start' });
+                                            setTimeout(() => {
+                                              window.scrollTo(0, originalScroll);
+                                              // Now try to scroll to the header with retry mechanism
+                                              setTimeout(() => {
+                                                let attempts = 0;
+                                                const maxAttempts = 10;
+                                                const retryDelay = 200;
+                                                
+                                                const tryScrollToHeader = () => {
+                                                  attempts++;
+                                                  const element = document.getElementById(child.id);
+                                                  
+                                                  if (element) {
+                                                    // Check if the element is actually visible
+                                                    const computedStyle = window.getComputedStyle(element);
+                                                    const isVisible = computedStyle.opacity !== '0' && computedStyle.display !== 'none';
+                                                    
+                                                    if (isVisible) {
+                                                      const offset = 100;
+                                                      const elementPosition = element.getBoundingClientRect().top;
+                                                      const offsetPosition = elementPosition + window.pageYOffset - offset;
+                                                      window.scrollTo({
+                                                        top: offsetPosition,
+                                                        behavior: 'smooth'
+                                                      });
+                                                    } else if (attempts < maxAttempts) {
+                                                      setTimeout(tryScrollToHeader, retryDelay);
+                                                    }
+                                                  } else if (attempts < maxAttempts) {
+                                                    setTimeout(tryScrollToHeader, retryDelay);
+                                                  }
+                                                };
+                                                
+                                                tryScrollToHeader();
+                                              }, 200);
+                                            }, 100);
+                                          } else {
+                                            // Section might already be loaded, try scrolling directly with retry
+                                            setTimeout(() => {
+                                              let attempts = 0;
+                                              const maxAttempts = 10;
+                                              const retryDelay = 200;
+                                              
+                                              const tryScrollToHeader = () => {
+                                                attempts++;
+                                                const element = document.getElementById(child.id);
+                                                
+                                                if (element) {
+                                                  // Check if the element is actually visible
+                                                  const computedStyle = window.getComputedStyle(element);
+                                                  const isVisible = computedStyle.opacity !== '0' && computedStyle.display !== 'none';
+                                                  
+                                                  if (isVisible) {
+                                                    const offset = 100;
+                                                    const elementPosition = element.getBoundingClientRect().top;
+                                                    const offsetPosition = elementPosition + window.pageYOffset - offset;
+                                                    window.scrollTo({
+                                                      top: offsetPosition,
+                                                      behavior: 'smooth'
+                                                    });
+                                                  } else if (attempts < maxAttempts) {
+                                                    setTimeout(tryScrollToHeader, retryDelay);
+                                                  }
+                                                } else if (attempts < maxAttempts) {
+                                                  setTimeout(tryScrollToHeader, retryDelay);
+                                                }
+                                              };
+                                              
+                                              tryScrollToHeader();
+                                            }, 50);
+                                          }
+                                        }}
+                                      >
+                                        {child.title}
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
