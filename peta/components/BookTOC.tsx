@@ -29,7 +29,15 @@ export default function BookTOC({ book, snippets = [], snippetsLoading = false, 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(true);
   const [expandedSnippets, setExpandedSnippets] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Initialize expanded sections with current section
+  useEffect(() => {
+    if (currentSectionId) {
+      setExpandedSections(new Set([currentSectionId]));
+    }
+  }, [currentSectionId]);
 
   useEffect(() => {
     // Handle initial hash scroll
@@ -483,24 +491,40 @@ export default function BookTOC({ book, snippets = [], snippetsLoading = false, 
               return (
                 <li key={section.id}>
                   <div className={styles.sectionGroup}>
-                    <a 
-                      href={`#section-${section.id}`}
-                      className={`${styles.tocLink} ${styles.sectionLink} ${isCurrentSection ? styles.active : ''} ${activeId === `section-${section.id}` || activeId === `section-placeholder-${section.id}` ? styles.active : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (onSectionSelect) {
-                          onSectionSelect(section.id);
-                        }
-                        window.history.pushState(null, '', `#section-${section.id}`);
-                        scrollToSection(section.id);
-                      }}
-                    >
-                      {isCurrentSection && <span className={styles.currentIndicator}>▶</span>}
-                      {section.title}
-                    </a>
+                    <div className={styles.sectionHeader}>
+                      <button 
+                        className={`${styles.sectionToggle}`}
+                        onClick={() => {
+                          const newExpanded = new Set(expandedSections);
+                          if (newExpanded.has(section.id)) {
+                            newExpanded.delete(section.id);
+                          } else {
+                            newExpanded.add(section.id);
+                          }
+                          setExpandedSections(newExpanded);
+                        }}
+                      >
+                        {expandedSections.has(section.id) ? '-' : '+'}
+                      </button>
+                      <a 
+                        href={`#section-${section.id}`}
+                        className={`${styles.tocLink} ${styles.sectionLink} ${isCurrentSection ? styles.active : ''}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (onSectionSelect) {
+                            onSectionSelect(section.id);
+                          }
+                          window.history.pushState(null, '', `#section-${section.id}`);
+                          scrollToSection(section.id);
+                        }}
+                      >
+                        
+                        {section.title}
+                      </a>
+                    </div>
                     
                     {/* Show headers and their snippets within the section */}
-                    {isDetailsExpanded && sectionHeaders.length > 0 && (
+                    {isDetailsExpanded && expandedSections.has(section.id) && sectionHeaders.length > 0 && (
                       <ul className={styles.headerList}>
                         {sectionHeaders.map((header) => {
                           // Find snippets that belong to this header
@@ -597,7 +621,7 @@ export default function BookTOC({ book, snippets = [], snippetsLoading = false, 
                     )}
                     
                     {/* Show snippets that are not under any header */}
-                    {isDetailsExpanded && (() => {
+                    {isDetailsExpanded && expandedSections.has(section.id) && (() => {
                       const standaloneSnippets = sectionSnippets.filter(s => !s.header);
                       if (standaloneSnippets.length === 0) return null;
                       
