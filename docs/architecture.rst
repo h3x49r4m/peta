@@ -13,6 +13,7 @@ Tech Stack
 - **Search:** Client-side search with pre-built index
 - **Processing:** Rust + WebAssembly + MathJax Node
 - **Hosting:** GitHub Pages with Fastly CDN
+- **Feature Control:** Dynamic feature configuration system
 
 Architecture Overview
 ---------------------
@@ -26,7 +27,8 @@ Architecture Overview
   ├── _content/ (RST files with LaTeX and snippet refs)
   │   ├── articles/ (RST files with LaTeX and snippet refs)
   │   ├── snippets/ (RST files with LaTeX)
-  │   └── projects/ (RST files with LaTeX)
+  │   ├── projects/ (RST files with LaTeX)
+  │   └── books/ (Multi-section RST files with toctree)
   ├── _build/ (Generated data and cache)
   │   └── data/
   │       ├── content-chunks/ (1K items per JSON file)
@@ -34,8 +36,11 @@ Architecture Overview
   │       ├── articles-index.json
   │       ├── projects-index.json
   │       ├── snippets-index.json
+  │       ├── books-index.json
   │       ├── search-index.json
   │       └── tags.json
+  ├── configs/ (Feature configuration)
+  │   └── features.json
   ├── processors/
   │   ├── rst-parser/ (Rust crate)
   │   ├── math-renderer/ (MathJax Node integration)
@@ -50,6 +55,7 @@ Architecture Overview
   │   ├── articles/ (Article listing with sidebar)
   │   ├── snippets/ (Card grid layout)
   │   ├── projects/ (Project showcase)
+  │   ├── books/ (Multi-section book reader)
   │   ├── api/ (API routes for content)
   │   └── posts/ (Dynamic routes for individual posts)
   ├── components/ (React components)
@@ -63,18 +69,52 @@ Architecture Overview
   │   ├── SnippetGrid.tsx (Snippet card grid)
   │   ├── SnippetModal.tsx (Snippet detail modal)
   │   ├── TableOfContents.tsx (TOC for articles)
-  │   └── TagFilter.tsx (Tag filtering)
+  │   ├── BookTOC.tsx (Interactive table of contents for books)
+  │   ├── BookGrid.tsx (Book card grid)
+  │   ├── BookTableOfContents.tsx (Book navigation)
+  │   ├── TagFilter.tsx (Tag filtering)
+  │   └── CodeBlock.tsx (Syntax highlighted code blocks)
+  ├── contexts/ (React contexts)
+  │   └── FeatureContext.tsx (Global feature management)
+  ├── hocs/ (Higher-order components)
+  │   └── withFeatureCheck.tsx (Feature-based route protection)
   ├── styles/ (CSS Modules)
   └── utils/ (Client-side JS + KaTeX fallback)
 
-2. Content Processing Pipeline
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2. Feature Configuration System
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The engine includes a flexible feature configuration system that allows users to enable/disable different content modules:
+
+Configuration Structure
+~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+  {
+    "modules": {
+      "books": { "enabled": true },
+      "articles": { "enabled": true },
+      "snippets": { "enabled": true },
+      "projects": { "enabled": true }
+    }
+  }
+
+Feature Control Flow
+~~~~~~~~~~~~~~~~~~~~
+
+::
+
+  Config File → FeatureContext → Layout Navigation → Route Protection → Component Rendering
+
+3. Content Processing Pipeline
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
   RST Files → Rust WASM → Extract LaTeX → MathJax Node → SVG Generation → Snippet Resolution → JSON Chunks → Next.js Build → Static Export
 
-3. Output Structure
+4. Output Structure
 ~~~~~~~~~~~~~~~~~~~
 
 ::
@@ -84,6 +124,7 @@ Architecture Overview
   ├── articles/ (Article listing with sidebar)
   ├── snippets/ (Card grid layout)
   ├── projects/ (Project showcase)
+  ├── books/ (Multi-section book reader)
   ├── data/
   │   ├── content-chunks/
   │   │   ├── posts-chunk-1.json (1K posts each with embedded snippets)
@@ -91,6 +132,7 @@ Architecture Overview
   │   │   └── ...
   │   ├── snippets-chunks/
   │   ├── projects-chunks/
+  │   ├── books-chunks/
   │   ├── math-cache/
   │   │   ├── formula-abc123.svg (cached SVGs)
   │   │   └── ...
@@ -100,14 +142,54 @@ Architecture Overview
   │   └── katex/ (KaTeX for fallback)
   └── api/ (Next.js API routes)
 
-4. Page Structure
+5. Page Structure
 ~~~~~~~~~~~~~~~~~
 
 - **Index:** Search bar + all tags categorized by content type
 - **Articles:** Left sidebar (table of contents, tags) + right content area
 - **Snippets:** Card grid with filtering and modal view
 - **Projects:** Tag filtering + project cards with modal view
+- **Books:** Multi-section reader with navigation and table of contents
 - **Contact:** Removed (contact links moved to footer)
+
+Book System
+------------
+
+Book Structure
+~~~~~~~~~~~~~~
+
+Books are multi-section documents with hierarchical organization:
+
+::
+
+  book/
+  ├── index.rst (Main book file with toctree directive)
+  ├── chapter1.rst
+  ├── chapter2.rst
+  └── ...
+
+toctree Directive
+~~~~~~~~~~~~~~~~
+
+::
+
+  .. toctree::
+     :maxdepth: 2
+     :caption: Contents:
+
+     introduction
+     chapter1
+     chapter2
+     ...
+
+Book Navigation Features
+~~~~~~~~~~~~~~~~~~~~~~~
+
+- **Section Navigation:** Previous/Next buttons for sequential reading
+- **Table of Contents:** Interactive TOC with current section highlighting
+- **Section Toggle:** Expand/collapse sections for focused reading
+- **URL State:** Maintains current section in URL parameters
+- **Hierarchical Display:** Shows headers and snippets within sections
 
 Snippet Embedding System
 ------------------------
@@ -122,7 +204,7 @@ Reference Format
 - **Version Control:** Handle snippet version compatibility
 
 Content Structure with Embedded Snippets
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
@@ -181,30 +263,34 @@ Components
 ~~~~~~~~~~
 
 - **Static Shell:** Instant loading of navigation/layout
+- **Feature Context:** Global feature state management
 - **Content Router:** Client-side routing for content
 - **Chunk Loader:** Lazy loading of content chunks
 - **Search Engine:** Client-side search with pre-built index
 - **Cache Manager:** Service Worker for offline support
 - **Snippet Viewer:** Interactive snippet viewing and embedding
+- **Book Reader:** Multi-section document navigation
 
 User Experience Flow
 ~~~~~~~~~~~~~~~~~~~~
 
 ::
 
-  User Visit → Static Shell (instant) → Content Load (1-2s) → Full Functionality
+  User Visit → Feature Config Load → Static Shell (instant) → Content Load (1-2s) → Full Functionality
 
 Content Features
 ----------------
 
+- **Feature Control:** Enable/disable content modules via configuration
 - **Global Search:** Instant search across all content including snippets
 - **Tag Filtering:** Client-side filtering by tags
 - **Snippet Embedding:** Reusable snippet cards in articles
 - **Math Display:** High-quality math rendering
-- **Table of Contents:** Auto-generated TOC for articles
+- **Table of Contents:** Auto-generated TOC for articles and books
 - **Modal Views:** Detailed view for snippets and projects
+- **Book Reading:** Sequential navigation with section management
 - **Responsive Design:** Mobile-first approach
-- **Content Types:** Support for articles, snippets, and projects
+- **Content Types:** Support for articles, snippets, projects, and books
 
 Build Pipeline
 --------------
@@ -237,6 +323,7 @@ Performance Optimizations
 - **CDN Caching:** GitHub Pages Fastly CDN
 - **Service Worker:** Cache static assets and content
 - **Snippet Caching:** Avoid duplicate snippet processing
+- **Feature-Based Loading:** Only load enabled features
 
 Search System
 -------------
@@ -268,6 +355,7 @@ Deployment Workflow
 Key Benefits
 ------------
 
+- **Flexible Configuration:** Enable/disable features without code changes
 - **Fast Builds:** 60-90 seconds (incremental: 15-20 seconds)
 - **Scalable:** Handles 10M+ articles efficiently
 - **Reusable Content:** Snippets can be embedded in multiple posts
@@ -275,6 +363,8 @@ Key Benefits
 - **SEO Friendly:** Static shell with proper meta tags
 - **Progressive Enhancement:** Works without JavaScript
 - **Content Modularity:** Snippets enable content reuse and organization
+- **Book Support:** Multi-section document organization
+- **Feature Modularity:** Users can choose which content types to include
 - **Flexible Architecture:** Suitable for various static website types beyond blogs
 
 Performance Metrics
@@ -285,3 +375,4 @@ Performance Metrics
 - **Search Results:** <500ms (client-side)
 - **Navigation:** Instant (client-side routing)
 - **Snippet Embedding:** Seamless integration with posts
+- **Book Navigation:** Instant section switching
