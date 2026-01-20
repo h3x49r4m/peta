@@ -485,3 +485,40 @@
     gap: var(--spacing-2);
   }
 }
+
+/* Table of Contents styles */
+.tocContainer {
+  margin: var(--spacing-6) 0;
+  padding: var(--spacing-4);
+  background: var(--surface-color);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.tocContainer h3 {
+  margin: 0 0 var(--spacing-3) 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.tocList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tocItem {
+  padding: var(--spacing-2) 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tocItem:last-child {
+  border-bottom: none;
+}
+
+.tocItem:first-child {
+  padding-top: 0;
+}

@@ -882,6 +882,20 @@ const section = sectionIndex !== -1 ? selectedBook.sections[sectionIndex] : sele
                                 );
                               }
                             }
+                          } else if (item.type === 'toctree') {
+                            // Render table of contents
+                            return (
+                              <div key={index} className={styles.tocContainer}>
+                                <h3>Table of Contents</h3>
+                                <ul className={styles.tocList}>
+                                  {item.content.map((sectionTitle: string, sectionIndex: number) => (
+                                    <li key={sectionIndex} className={styles.tocItem}>
+                                      {sectionIndex + 1}. {sectionTitle}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            );
                           } else if (item.type === 'embedded-snippet') {
                             // Render the embedded snippet directly
                             const snippetTitle = item.title || item.id;
