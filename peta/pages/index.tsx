@@ -133,7 +133,7 @@ export default function Home() {
     return (
       <div className={styles.tagCloud}>
         {sortedTags.map((tag) => {
-          const fontSize = Math.max(0.8, Math.min(1.5, 0.8 + (tag.count / 20) * 0.7));
+          const fontSize = Math.max(0.7, Math.min(1.2, 0.7 + (tag.count / 20) * 0.5));
           return (
             <button
               key={tag.name}
@@ -165,7 +165,6 @@ export default function Home() {
         </div>
       ) : (
         <section className={styles.tagsSection}>
-          <h2 className={styles.sectionTitle}>Browse by Tags</h2>
           {renderTagCloud()}
         </section>
       )}
