@@ -151,7 +151,7 @@
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 1rem;
+  padding: 0; /* Remove padding from container */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-right: 0.5rem;
   min-width: 250px;
@@ -163,6 +163,8 @@
   transform: translateX(-20px);
   transition: all 0.3s ease;
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .bookTOC.expanded .tocPanel {
@@ -176,10 +178,16 @@
   border-bottom: 1px solid var(--border-color);
   background: var(--surface-color);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  display: flex;
+  display: flex !important;
   justify-content: space-between;
   align-items: center;
   min-width: 0; /* Allows flex items to shrink */
+  opacity: 1 !important;
+  visibility: visible !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
 }
 
 .tocTitle {
@@ -228,8 +236,11 @@
 
 .tocList {
   list-style: none;
-  padding: 0;
+  padding: var(--spacing-4);
+  padding-top: var(--spacing-3);
   margin: 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .tocItem {
