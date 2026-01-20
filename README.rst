@@ -1,32 +1,68 @@
-Peta - Static Website Engine
-============================
+Peta - High-Performance Static Website Engine
+===============================================
 
-A high-performance static website engine with RST content, math support, and snippet embedding capabilities. Designed for documentation sites, educational platforms, knowledge bases, and content-heavy websites.
+A sophisticated static website engine designed for documentation sites, educational platforms, knowledge bases, and content-heavy websites. Built with Next.js, featuring advanced RST content processing, mathematical formula rendering, and a flexible feature management system.
 
 Features
 --------
 
+**Core Capabilities**
+
+- **Feature Management**: Dynamic module enabling/disabling via configuration
+- **Multi-Content Types**: Articles, Books, Snippets, and Projects with specialized rendering
+- **Advanced RST Processing**: Rust WebAssembly parser for 10-20x faster performance
+- **Mathematical Rendering**: LaTeX support with KaTeX and pre-rendered SVG
+- **Snippet System**: Reusable content chunks with circular reference detection
+- **Global Search**: Client-side search with pre-built index across all content types
+- **Tag Management**: Unified tagging system with frequency-based visualization
+- **Responsive Design**: Mobile-first design with CSS Modules and touch support
+
+**Content Features**
+
+- **Books**: Multi-section documents with toctree support and sequential navigation
+- **Articles**: Full-featured blog posts with automatic TOC generation
+- **Snippets**: Code gallery with syntax highlighting for 20+ languages
+- **Projects**: Portfolio showcases with modal-based detailed views
+- **Embedded Content**: Snippet references within articles and books
+
+**Performance & Architecture**
+
 - **Static Generation**: Fast builds with incremental updates (60-90 seconds)
-- **RST Content**: Support for reStructuredText with YAML frontmatter
-- **Math Rendering**: LaTeX math with KaTeX and pre-rendered SVG
-- **Snippet System**: Reusable content chunks that can be embedded in articles
-- **Search**: Client-side search with pre-built index
-- **Tagging**: Unified tagging system across all content types
-- **Responsive Design**: Mobile-first design with CSS Modules
-- **Performance Optimized**: Code splitting, lazy loading, and caching
-- **Multiple Content Types**: Support for articles, snippets, and projects
-- **Flexible Architecture**: Suitable for documentation, educational sites, and knowledge bases
+- **Content Chunking**: 1K items per JSON file for handling 10M+ articles
+- **Code Splitting**: Lazy loading of syntax highlighters and content
+- **WebAssembly**: Rust-based RST parser for optimal performance
+- **Caching Strategy**: Math formula caching and efficient data structures
 
 Architecture
 ------------
 
-- **Frontend**: Next.js with static export
-- **Content**: RST files processed by Rust WebAssembly
-- **Styling**: CSS Modules with PostCSS
-- **Math**: KaTeX (client-side) + pre-rendered SVG (build-time)
-- **Search**: Client-side search with pre-built index
-- **Processing**: Rust + WebAssembly + MathJax Node
-- **Hosting**: GitHub Pages with Fastly CDN
+**System Architecture**
+
+.. code-block:: text
+
+   Layout --> FeatureContext --> withFeatureCheck --> Pages
+       ↓
+   Navigation (conditional based on features)
+       ↓
+   Main Pages --> API Endpoints --> Content Processors --> Data (_build/data)
+
+**Technology Stack**
+
+- **Frontend**: Next.js 14.2.35 with TypeScript, static export capability
+- **Content Processing**: Rust WebAssembly (RST parser) + MathJax Node
+- **Styling**: CSS Modules + PostCSS with responsive design
+- **Math Rendering**: KaTeX (client-side) + pre-rendered SVG (build-time)
+- **Search**: Client-side search with pre-built JSON index
+- **Deployment**: GitHub Pages with Fastly CDN
+
+**Feature Management System**
+
+The site implements a sophisticated feature flag system:
+
+- **Configuration**: ``/peta/configs/features.json`` for module control
+- **Global State**: ``FeatureContext`` for application-wide feature awareness
+- **Page Protection**: ``withFeatureCheck`` HOC for route-level feature gating
+- **Dynamic Navigation**: Conditional menu items based on enabled features
 
 Getting Started
 ---------------
@@ -62,7 +98,7 @@ Installing wasm-pack
 
     wasm-pack --version
 
-Note: The Rust and wasm-pack tools are used for compiling the RST parser to WebAssembly, which provides 10-20x faster processing compared to JavaScript alternatives.
+Note: The Rust and wasm-pack tools compile the RST parser to WebAssembly, providing 10-20x faster processing compared to JavaScript alternatives.
 
 Installation
 ~~~~~~~~~~~~
@@ -104,7 +140,8 @@ Content Structure
    _content/
    ├── articles/       # Articles and documentation
    ├── snippets/       # Reusable content snippets
-   └── projects/       # Project showcases
+   ├── projects/       # Project showcases
+   └── books/          # Multi-section books with toctree
 
 Content Format
 ~~~~~~~~~~~~~~
@@ -112,12 +149,13 @@ Content Format
 Each content file uses RST format with YAML frontmatter::
 
     ---
-    title: "Article Title"
+    title: "Content Title"
     date: 2023-01-15
     tags: ["tag1", "tag2"]
+    author: "Author Name"
     ---
 
-    Article Title
+    Content Title
     =============
 
     Content here with math: $E=mc^2$
@@ -126,10 +164,29 @@ Each content file uses RST format with YAML frontmatter::
 
     More content...
 
+**Books Structure**
+
+Books support multi-section organization with toctree directives::
+
+    ---
+    title: "Book Title"
+    author: "Author Name"
+    ---
+
+    Book Title
+    ==========
+
+    .. toctree::
+       :maxdepth: 2
+
+       section-1
+       section-2
+       section-3
+
 Snippet Embedding
 ~~~~~~~~~~~~~~~~~
 
-Embed snippets in articles using the RST directive::
+Embed snippets in any content using the RST directive::
 
     .. snippet:: snippet-id
 
@@ -142,6 +199,29 @@ The website engine supports LaTeX math expressions:
 - **Block math**: ``$$\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}$$``
 
 Math is rendered to SVG during build time for optimal performance.
+
+Feature Configuration
+---------------------
+
+The site's features can be configured via ``/peta/configs/features.json``:
+
+.. code-block:: json
+
+   {
+     "modules": {
+       "books": { "enabled": true },
+       "articles": { "enabled": true },
+       "snippets": { "enabled": true },
+       "projects": { "enabled": true }
+     }
+   }
+
+**Available Features**
+
+- **books**: Multi-section book reader with navigation
+- **articles**: Article browsing with full-text reading
+- **snippets**: Code snippet gallery with syntax highlighting
+- **projects**: Portfolio-style project showcase
 
 CLI Tools
 ---------
@@ -178,16 +258,14 @@ Build Commands
 - ``npm run start``: Start production server
 - ``npm run export``: Build and export static files
 
-Note: The content processing pipeline is handled automatically during development and build.
-
 Data Generation
 ~~~~~~~~~~~~~~~
 
 The ``_build`` directory contains processed data and is generated automatically:
 
-1. **During Development**: When you run ``npm run dev``, the content from ``_content/`` is processed and stored in ``_build/data/``
+1. **During Development**: When you run ``npm run dev``, content from ``_content/`` is processed and stored in ``_build/data/``
 
-2. **During Build**: When you run ``npm run build``, all content is processed, math formulas are rendered to SVG, and the data is chunked for optimal performance
+2. **During Build**: When you run ``npm run build``, all content is processed, math formulas are rendered to SVG, and data is chunked for performance
 
 3. **Manual Processing**: To manually process content without starting the dev server::
 
@@ -198,7 +276,7 @@ The ``_build/data`` directory contains:
 
 - ``content-chunks/`` - JSON files with 1K items each for efficient loading
 - ``math-cache/`` - Pre-rendered SVG versions of math formulas
-- ``*-index.json`` - Index files for articles, snippets, and projects
+- ``*-index.json`` - Index files for articles, snippets, projects, and books
 - ``search-index.json`` - Search index for client-side search
 - ``tags.json`` - Tag information with counts
 
@@ -209,17 +287,37 @@ Viewing Static Build
 
 To view the static build directly::
 
-    cd peta/out
+    cd _build
     npx serve .
     # or
     python3 -m http.server 8000
 
    The static site will be available at http://localhost:8000
 
+API Endpoints
+-------------
+
+The site provides comprehensive API endpoints for content management:
+
+**Content APIs**
+- ``/api/content/book`` - Book content with section parsing and toctree
+- ``/api/content/[type]`` - Dynamic content serving (articles, snippets, projects)
+- ``/api/content/snippet`` - Dedicated snippet endpoint
+- ``/api/content/recent`` - Recently updated content aggregation
+
+**Search & Discovery**
+- ``/api/search`` - Global full-text search across all content types
+- ``/api/tags`` - Tag management and counting
+
+**Configuration**
+- ``/api/config/features`` - Feature flag management
+
+For detailed API documentation, see ``docs/features/api-endpoints.rst``.
+
 Deployment
 ----------
 
-The site is designed for GitHub Pages deployment. The build output in ``peta/out/`` can be deployed to any static hosting service.
+The site is designed for GitHub Pages deployment with automated CI/CD.
 
 GitHub Pages Deployment
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -239,53 +337,65 @@ To enable automatic deployment:
 
 2. **Configure Custom Domain** (optional):
 
-   - If you want to use a custom domain, edit the ``cname`` field in ``peta/.github/workflows/build.yml``
+   - Edit the ``cname`` field in ``peta/.github/workflows/build.yml``
    - Or configure it in **Settings** → **Pages** → **Custom domain**
 
 3. **Push Changes**:
 
-   - Any push to the main branch will trigger the build and deployment
-   - The workflow will build the site, process content, render math, and deploy to GitHub Pages
-
-Manual Deployment
------------------
-
-To deploy manually without GitHub Actions:
-
-1. **Build the site**::
-
-    cd peta
-    npm run build
-    npm run export
-
-2. **Deploy to GitHub Pages** using gh CLI::
-
-    # Install gh CLI if not already installed
-    # https://cli.github.com/
-    
-    # Deploy the out directory
-    gh-pages --dist=out --branch=gh-pages
-
-3. **Configure GitHub Pages**:
-
-   - Go to **Settings** → **Pages**
-   - Set **Source** to **Deploy from a branch**
-   - Select **gh-pages** branch and **/(root)** folder
+   - Any push to the main branch triggers the build and deployment
+   - The workflow builds the site, processes content, renders math, and deploys
 
 Deployment Workflow
 ------------------
 
 The deployment process includes:
 
-1. **Content Processing**: RST files are converted to JSON
-2. **Math Rendering**: LaTeX formulas are rendered to SVG
-3. **Static Build**: Next.js builds the static site
-4. **Export**: Static files are exported to ``peta/out/``
-5. **Deployment**: Files are deployed to GitHub Pages
+1. **Rust/WASM Build**: Compile RST parser to WebAssembly
+2. **Content Processing**: Convert RST files to JSON with chunking
+3. **Math Rendering**: Convert LaTeX formulas to SVG
+4. **Snippet Resolution**: Process snippet references and embeddings
+5. **Next.js Build**: Generate static site with optimized chunks
+6. **Static Export**: Export to ``peta/out/`` directory
+7. **GitHub Pages**: Deploy to GitHub Pages with Fastly CDN
 
-The site will be available at:
-- Default: ``https://<username>.github.io/<repository>``
-- Custom domain: As configured in your settings
+Performance
+-----------
+
+The architecture is optimized for handling 10M+ articles:
+
+**Build Metrics**
+- **Full Build**: 60-90 seconds
+- **Incremental Build**: 15-20 seconds
+- **Content Capacity**: Designed for 10M+ articles
+- **First Load**: <2 seconds (static shell)
+- **Content Load**: 1-2 seconds (first chunk)
+- **Search Results**: <500ms (client-side)
+
+**Optimizations**
+- Content chunking for efficient loading
+- Math formula caching (SVG generation)
+- Parallel RST processing with Rust WASM
+- Code splitting and lazy loading
+- Service worker caching support
+- Feature-based code splitting
+
+Documentation
+-------------
+
+For comprehensive documentation, see:
+
+- **Architecture**: ``docs/architecture.rst`` - Detailed system architecture
+- **Features**: ``docs/features/`` - Complete feature documentation
+  - ``docs/features/overview.rst`` - Core architecture and shared features
+  - ``docs/features/feature-management.rst`` - Feature flag system
+  - ``docs/features/home-page.rst`` - Homepage features
+  - ``docs/features/books-page.rst`` - Book reader features
+  - ``docs/features/articles-page.rst`` - Article features
+  - ``docs/features/projects-page.rst`` - Project showcase features
+  - ``docs/features/snippets-page.rst`` - Snippet gallery features
+  - ``docs/features/api-endpoints.rst`` - API documentation
+  - ``docs/features/special-pages.rst`` - Error pages and testing tools
+- **CLI Tools**: ``cli/README.rst`` - Command-line interface documentation
 
 Troubleshooting
 ---------------
@@ -294,19 +404,9 @@ Common issues:
 
 - **404 errors**: Ensure the ``basePath`` in ``next.config.js`` matches your repository name
 - **Math not rendering**: Check that the math cache is properly generated during build
-- **Content not loading**: Verify that the API routes are correctly exported in the static build
-
-Performance
------------
-
-The architecture is optimized for handling 10M+ articles:
-
-- **Build Time**: 60-90 seconds (incremental: 15-20 seconds)
-- **Content Chunking**: 1K items per JSON file
-- **Math Caching**: Reuse rendered formulas
-- **Parallel Processing**: Multi-core RST conversion
-- **Lazy Loading**: Content chunks loaded on demand
-- **Scalable Architecture**: Suitable for various content-heavy websites
+- **Content not loading**: Verify that API routes are correctly exported in the static build
+- **Feature flags not working**: Check ``/api/config/features`` endpoint and configuration file
+- **RST parsing errors**: Verify Rust and wasm-pack are properly installed
 
 Contributing
 ------------
@@ -317,10 +417,12 @@ Contributing
 4. Test your changes with ``npm run dev``
 5. Submit a pull request
 
-For more information, see:
+When contributing:
 
-- Architecture documentation in ``docs/architecture.rst``
-- CLI tools documentation in ``cli/README.rst``
+- Follow the existing code style and patterns
+- Update documentation for new features
+- Test with different feature configurations
+- Ensure responsive design is maintained
 
 License
 -------
