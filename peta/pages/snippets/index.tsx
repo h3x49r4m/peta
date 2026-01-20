@@ -10,29 +10,70 @@ import withFeatureCheck from '../../hocs/withFeatureCheck';
 interface Snippet {
   id: string;
   title: string;
-  description: string;
+  date: string;
+  content: any[];
   tags: string[];
-  language: string;
-  code: string;
-  frontmatter?: {
-    title?: string;
-    tags?: string[];
-    language?: string;
-    snippet_id?: string;
-  };
 }
 
 function SnippetsPage() {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [tags, setTags] = useState<any[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>('');
-  const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedSnippet, setSelectedSnippet] = useState<Snippet | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     loadSnippetsContent();
   }, []);
+
+  useEffect(() => {
+    // Check for snippet query parameter
+    const snippetId = router.query.snippet as string;
+    
+    if (snippetId && snippets.length > 0) {
+      const snippet = snippets.find(s => s.id === snippetId);
+      if (snippet) {
+        setSelectedSnippet(snippet);
+        setIsModalOpen(true);
+      }
+    }
+  }, [router.query.snippet, snippets]);
+
+  useEffect(() => {
+    // Reset selected snippet when the route changes (e.g., when clicking the Snippets link)
+    const handleRouteChange = (url: string) => {
+      // If navigating to /snippets without query params, clear selections
+      if (url === '/snippets' || url === '/snippets?') {
+        setSelectedTag('');
+        setIsModalOpen(false);
+      }
+    };
+    
+    router.events.on('routeChangeComplete', handleRouteChange);
+    
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router]);
+
+  // Also check on mount
+  useEffect(() => {
+    // If URL is just /snippets without query params, clear selections
+    if (router.asPath === '/snippets' || router.asPath === '/snippets?') {
+      setSelectedTag('');
+    }
+  }, [router.asPath]);
+
+  useEffect(() => {
+    // When a tag is selected, update URL
+    if (selectedTag) {
+      // Update URL to include tag
+      const url = `/snippets?tag=${encodeURIComponent(selectedTag)}`;
+      window.history.pushState({}, '', url);
+    }
+  }, [selectedTag]);
 
   const loadSnippetsContent = async () => {
     try {
@@ -44,7 +85,16 @@ function SnippetsPage() {
       const snippetsData = await snippetsResponse.json();
       const tagsData = await tagsResponse.json();
       
-      setSnippets(snippetsData);
+      // Sort snippets by date (newest first)
+      const sortedSnippets = Array.isArray(snippetsData) 
+        ? snippetsData.sort((a: Snippet, b: Snippet) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateB.getTime() - dateA.getTime(); // Newest first
+          })
+        : snippetsData;
+      
+      setSnippets(sortedSnippets);
       setTags(tagsData);
     } catch (error) {
       console.error('Error loading snippets:', error);
@@ -59,79 +109,64 @@ function SnippetsPage() {
 
   const handleSnippetClick = (snippet: Snippet) => {
     setSelectedSnippet(snippet);
-    // Update URL with snippet parameter
-    router.push(
-      {
-        pathname: router.pathname,
-        query: { ...router.query, snippet: snippet.id },
-      },
-      undefined,
-      { shallow: true }
-    );
+    setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
+  const handleModalClose = () => {
+    setIsModalOpen(false);
     setSelectedSnippet(null);
-    // Remove snippet parameter from URL
-    const { snippet, ...restQuery } = router.query;
-    router.push(
-      {
-        pathname: router.pathname,
-        query: restQuery,
-      },
-      undefined,
-      { shallow: true }
-    );
   };
 
-  // Check for snippet parameter in URL on mount
-  useEffect(() => {
-    if (router.query.snippet && snippets.length > 0) {
-      const snippet = snippets.find(s => s.id === router.query.snippet);
-      if (snippet) {
-        setSelectedSnippet(snippet);
-      }
-    }
-  }, [router.query.snippet, snippets]);
-
-  if (loading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.loadingMessage}>Loading snippets...</div>
-      </div>
-    );
-  }
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setSelectedTag(''); // Clear selected tag when clicking title
+    // Update the URL to just /snippets
+    window.history.pushState({}, '', '/snippets');
+  };
 
   return (
     <div className={styles.pageContainer}>
-      <div className={styles.pageHeader}>
-        <Link href="/snippets" className={styles.titleLink}>
-          <h1 className={styles.pageTitle}>Code Snippets</h1>
-        </Link>
-        <p className={styles.pageDescription}>
-          Collection of reusable code snippets and examples
-        </p>
-      </div>
-
-      {tags.length > 0 && (
-        <TagFilter
-          tags={tags}
-          selectedTag={selectedTag}
-          onTagSelect={setSelectedTag}
-        />
-      )}
-
-      <SnippetGrid 
-        snippets={filteredSnippets} 
-        onSnippetClick={handleSnippetClick} 
+      {/* Section 1: Header with title and tags */}
+      <header className={styles.pageHeader}>
+        <div className={styles.headerSection}>
+                <Link href="/snippets" onClick={handleTitleClick} className={styles.titleLink}>
+                  <h1 className={styles.title}>Snippets</h1>
+                </Link>
+                <div className={styles.tagsSection}>
+                  <TagFilter
+                    tags={tags}
+                    selectedTag={selectedTag}
+                    onTagSelect={setSelectedTag}
+                  />
+                </div>
+              </div>      </header>
+      
+      {/* Section 2: Full-width cards grid */}
+      <main className={styles.mainContentFull}>
+        {selectedTag && (
+          <div className={styles.tagInfo}>
+            <p>Showing snippets tagged with <strong>{selectedTag}</strong></p>
+          </div>
+        )}
+        
+        {loading ? (
+          <div className={styles.loading}>
+            <p>Loading snippets...</p>
+          </div>
+        ) : (
+          <SnippetGrid 
+            snippets={filteredSnippets} 
+            onSnippetClick={handleSnippetClick}
+          />
+        )}
+      </main>
+      
+      {/* Modal for snippet details */}
+      <SnippetModal
+        snippet={selectedSnippet}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
       />
-
-      {selectedSnippet && (
-        <SnippetModal
-          snippet={selectedSnippet}
-          onClose={handleCloseModal}
-        />
-      )}
     </div>
   );
 }

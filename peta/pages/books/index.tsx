@@ -49,7 +49,6 @@ function BooksPage({ initialBookId }: { initialBookId?: string }) {
   const [snippets, setSnippets] = useState<any[]>([]);
   const [snippetsLoading, setSnippetsLoading] = useState(true);
   const [currentSectionId, setCurrentSectionId] = useState<string>('');
-
   const router = useRouter();
   
   // Get the book ID from router query (works on both server and client)
@@ -75,39 +74,131 @@ function BooksPage({ initialBookId }: { initialBookId?: string }) {
     }
   }, [books, bookId]);
 
+  // Handle section parameter in URL
   useEffect(() => {
-    if (selectedBook) {
-      console.log('Selected book changed:', selectedBook.title);
-      // Reset current section when book changes
-      setCurrentSectionId('');
-      
-      // Set initial section from URL if provided
-      if (router.query.section) {
-        const sectionId = router.query.section as string;
-        if (selectedBook.sections?.find(s => s.id === sectionId)) {
-          setCurrentSectionId(sectionId);
-        }
-      } else {
-        // Default to first section if no section specified
-        if (selectedBook.sections && selectedBook.sections.length > 0) {
-          setCurrentSectionId(selectedBook.sections[0].id);
+    if (selectedBook && router.query.section) {
+      const sectionId = router.query.section as string;
+      // Find the section with this ID
+      const sectionIndex = selectedBook.sections.findIndex(s => s.id === sectionId);
+      if (sectionIndex !== -1) {
+        setCurrentSectionId(sectionId);
+        
+        // Handle hash after section is loaded
+        if (router.asPath.includes('#')) {
+          const hash = router.asPath.split('#')[1];
+          setTimeout(() => {
+            const element = document.getElementById(hash);
+            if (element) {
+              const offset = 100;
+              const elementPosition = element.getBoundingClientRect().top;
+              const offsetPosition = elementPosition + window.pageYOffset - offset;
+              window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+              });
+            }
+          }, 500);
         }
       }
+    } else if (selectedBook && selectedBook.sections.length > 0) {
+      // Default to 'index' section if no section parameter
+      setCurrentSectionId('index');
     }
-  }, [selectedBook, router.query.section]);
+  }, [selectedBook, router.query.section, router.asPath]);
 
   useEffect(() => {
-    // Handle scroll events for back to top button
+    // Reset selected book only when navigating to the main books page without parameters
+    const handleRouteChange = (url: string) => {
+      if (url === '/books' || url === '/books?') {
+        console.log('Route change detected, clearing selected book');
+        setSelectedBook(null);
+        setSelectedTag('');
+        setShowTOC(false);
+      }
+    };
+    
+    router.events.on('routeChangeComplete', handleRouteChange);
+    
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router]);
+
+  // Check on mount - but don't clear if there's a book parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasBookParam = urlParams.has('book');
+    
+    if (!hasBookParam && (router.asPath === '/books' || router.asPath === '/books?')) {
+      console.log('No book parameter, clearing state');
+      setSelectedBook(null);
+      setSelectedTag('');
+      setShowTOC(false);
+    }
+  }, [router.asPath]);
+
+  useEffect(() => {
+    // When a tag is selected, clear the selected book
+    if (selectedTag) {
+      console.log('Tag selected, clearing selected book:', selectedTag);
+      setSelectedBook(null);
+      setShowTOC(false);
+      const url = `/books?tag=${encodeURIComponent(selectedTag)}`;
+      window.history.pushState({}, '', url);
+    }
+  }, [selectedTag]);
+
+useEffect(() => {
+    // Handle scroll to show/hide back to top button and load sections incrementally
     const handleScroll = () => {
       setShowBackToTop(window.pageYOffset > 300);
+      
+      // Load sections incrementally as they come into view
+      if (selectedBook && selectedBook.sections) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                const sectionId = entry.target.id;
+                if (sectionId.startsWith('section-placeholder-')) {
+                  const actualSectionId = sectionId.replace('section-placeholder-', '');
+                  
+                  // Load the section when it comes into view
+                  setLoadedSections(prev => {
+                    const updated = new Set(prev);
+                    updated.add(actualSectionId);
+                    return updated;
+                  });
+                  
+                  // Stop observing this section once loaded
+                  observer.unobserve(entry.target);
+                }
+              }
+            });
+          },
+          {
+            rootMargin: '100px', // Start loading 100px before section is visible
+            threshold: 0.1
+          }
+        );
+
+        // Observe all section placeholders that haven't been loaded yet
+        selectedBook.sections.forEach((section) => {
+          if (!loadedSections.has(section.id)) {
+            const element = document.getElementById(`section-placeholder-${section.id}`);
+            if (element) {
+              observer.observe(element);
+            }
+          }
+        });
+
+        return () => observer.disconnect();
+      }
     };
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, [selectedBook, loadedSections]);
 
   const loadBooksContent = async () => {
     try {
@@ -138,123 +229,539 @@ function BooksPage({ initialBookId }: { initialBookId?: string }) {
     ? books.filter(book => book.tags.includes(selectedTag))
     : books;
 
-  const handleBackToGrid = () => {
-    // Clear the book parameter from URL
-    const { book, ...restQuery } = router.query;
-    router.push(
-      {
-        pathname: router.pathname,
-        query: restQuery,
-      },
-      undefined,
-      { shallow: true }
-    );
+  const handleBookSelect = async (book: Book) => {
+    setSelectedBook(book);
+    setShowTOC(true);
+    
+    // Update URL
+    const url = `/books?book=${encodeURIComponent(book.id)}`;
+    window.history.pushState({}, '', url);
+    
+    // Render content with math
+    if (book.content && book.content.length > 0) {
+      const content = book.content
+        .filter(block => block.type === 'text')
+        .map(block => block.content)
+        .join('\n');
+      setRenderedContent(content);
+    } else {
+      setRenderedContent('');
+    }
+  };
+
+  const handleBackToList = () => {
     setSelectedBook(null);
     setShowTOC(false);
-    setCurrentSectionId('');
+    const url = selectedTag ? `/books?tag=${encodeURIComponent(selectedTag)}` : '/books';
+    window.history.pushState({}, '', url);
   };
 
-  const handleSectionSelect = (sectionId: string) => {
-    setCurrentSectionId(sectionId);
-    // Update URL with section parameter
-    router.push(
-      {
-        pathname: router.pathname,
-        query: { ...router.query, section: sectionId },
-      },
-      undefined,
-      { shallow: true }
-    );
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Parse RST content (simplified version for now)
-  const parseRST = (content: string, sectionId?: string) => {
-    // For now, just convert basic RST to HTML
-    // This is a placeholder - you might want to use a proper RST parser
-    return content
-      .replace(/^=+$/gm, (match) => {
-        const level = match.length;
-        return `<h${Math.min(level, 6)}>`;
-      })
-      .replace(/^-+$/gm, '<h3>')
-      .replace(/^~+$/gm, '<h4>')
-      .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/^(.+)$/gm, '<p>$1</p>')
-      .replace(/<p><h/g, '<h')
-      .replace(/<\/h(\d)><\/p>/g, '</h$1>')
-      .replace(/<p><pre>/g, '<pre>')
-      .replace(/<\/pre><\/p>/g, '</pre>');
-  };
+  
 
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(`section-${sectionId}`);
-    if (element) {
-      const offset = 100; // Adjust this value based on your header height
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-      
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+  const parseSimpleTable = (lines: string[], startIndex: number): { html: string; nextIndex: number } => {
+    const tableLines: string[] = [];
+    let i = startIndex;
+    
+    // Collect all table lines
+    while (i < lines.length && (lines[i].includes('|') || lines[i].trim() === '')) {
+      if (lines[i].trim()) {
+        // Skip separator lines (lines with only |, -, and spaces)
+        const trimmed = lines[i].replace(/\s/g, '');
+        if (!trimmed.match(/^\|[-\|]+\|?$/)) {
+          tableLines.push(lines[i]);
+        }
+      }
+      i++;
     }
+    
+    if (tableLines.length < 2) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Parse table rows
+    const rows: string[][] = [];
+    for (const line of tableLines) {
+      const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell);
+      if (cells.length > 0) {
+        rows.push(cells);
+      }
+    }
+    
+    if (rows.length === 0) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Generate HTML table
+    let html = '<table class="rst-table">\n';
+    
+    // First row is header
+    if (rows.length > 0) {
+      html += '<thead>\n<tr>\n';
+      for (const cell of rows[0]) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<th>${formattedCell}</th>\n`;
+      }
+      html += '</tr>\n</thead>\n';
+    }
+    
+    // Remaining rows are body
+    html += '<tbody>\n';
+    for (let r = 1; r < rows.length; r++) {
+      html += '<tr>\n';
+      for (const cell of rows[r]) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<td>${formattedCell}</td>\n`;
+      }
+      html += '</tr>\n';
+    }
+    html += '</tbody>\n</table>\n';
+    
+    return { html, nextIndex: i };
   };
 
-  const scrollToSnippet = (snippetId: string) => {
-    const element = document.getElementById(`snippet-${snippetId}`);
-    if (element) {
-      const offset = 100;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-      
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+  const parseRstSimpleTable = (lines: string[], startIndex: number): { html: string; nextIndex: number } => {
+    // Handle RST simple tables with space-separated columns and dash separators
+    const rows: string[][] = [];
+    let i = startIndex;
+    
+    // Get header row
+    const headerLine = lines[i];
+    const headerCells = parseTableRow(headerLine);
+    if (headerCells.length === 0) {
+      return { html: '', nextIndex: startIndex };
     }
+    
+    // Check if the next line is a separator line (dashes)
+    if (i + 1 >= lines.length || !lines[i + 1].trim().match(/^[=-]+(\s+[=-]+)*$/)) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Skip the separator line (dashes)
+    i += 2;
+    
+    // Parse data rows until we hit an empty line or a line that looks like another separator
+    while (i < lines.length && lines[i].trim() !== '') {
+      const line = lines[i].trim();
+      
+      // Stop if we encounter another separator line
+      if (line.match(/^[=-]+(\s+[=-]+)*$/)) {
+        break;
+      }
+      
+      const rowCells = parseTableRow(lines[i]);
+      if (rowCells.length > 0) {
+        rows.push(rowCells);
+      }
+      i++;
+    }
+    
+    // Generate HTML table
+    let html = '<table class="rst-table">\n';
+    
+    // Generate header
+    html += '<thead>\n<tr>\n';
+    for (const cell of headerCells) {
+      const formattedCell = cell
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code>$1</code>');
+      html += `<th>${formattedCell}</th>\n`;
+    }
+    html += '</tr>\n</thead>\n';
+    
+    // Generate body
+    html += '<tbody>\n';
+    for (const row of rows) {
+      html += '<tr>\n';
+      for (const cell of row) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<td>${formattedCell}</td>\n`;
+      }
+      html += '</tr>\n';
+    }
+    html += '</tbody>\n</table>\n';
+    
+    return { html, nextIndex: i };
+  };
+
+  const parseTableRow = (line: string): string[] => {
+    // Parse a table row by identifying column boundaries
+    // This handles both space-separated and tab-separated columns
+    const cells: string[] = [];
+    
+    // First try to split on tabs (if any)
+    if (line.includes('\t')) {
+      const parts = line.split('\t');
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (trimmed) {
+          cells.push(trimmed);
+        }
+      }
+    } else {
+      // Split on multiple spaces (3 or more for better column detection)
+      const parts = line.split(/\s{3,}/);
+      
+      // If that doesn't work well, try with 2 spaces
+      if (parts.length === 1) {
+        const fallbackParts = line.split(/\s{2,}/);
+        for (const part of fallbackParts) {
+          const trimmed = part.trim();
+          if (trimmed) {
+            cells.push(trimmed);
+          }
+        }
+      } else {
+        for (const part of parts) {
+          const trimmed = part.trim();
+          if (trimmed) {
+            cells.push(trimmed);
+          }
+        }
+      }
+    }
+    
+    return cells;
+  };
+
+  const parseRSTTable = (lines: string[], startIndex: number): { html: string; nextIndex: number } => {
+    // This handles more complex grid tables with +---+ borders
+    const tableLines: string[] = [];
+    let i = startIndex;
+    
+    // Find the start of the table (line with +---+ pattern)
+    while (i < lines.length && !lines[i].includes('+---')) {
+      i++;
+    }
+    
+    if (i >= lines.length) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Collect table lines
+    while (i < lines.length && (lines[i].includes('+') || lines[i].includes('|'))) {
+      tableLines.push(lines[i]);
+      i++;
+    }
+    
+    if (tableLines.length < 3) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Parse grid table
+    const rows: string[][] = [];
+    for (const line of tableLines) {
+      if (line.includes('|')) {
+        // Remove borders and split by |
+        const content = line.replace(/^\+\s*\|\s*|\s*\|\s*\+$/g, '').replace(/\s*\|\s*/g, '|');
+        const cells = content.split('|').map(cell => cell.trim());
+        if (cells.length > 0) {
+          rows.push(cells);
+        }
+      }
+    }
+    
+    if (rows.length === 0) {
+      return { html: '', nextIndex: startIndex };
+    }
+    
+    // Generate HTML table
+    let html = '<table class="rst-table">\n';
+    
+    // Check if there's a header separator
+    let hasHeader = false;
+    let headerRowIndex = 0;
+    
+    for (let j = 0; j < tableLines.length; j++) {
+      if (tableLines[j].includes('+') && tableLines[j].match(/\+=+/)) {
+        hasHeader = true;
+        headerRowIndex = j - 1;
+        break;
+      }
+    }
+    
+    // Generate header
+    if (hasHeader && headerRowIndex >= 0 && headerRowIndex < rows.length) {
+      html += '<thead>\n<tr>\n';
+      for (const cell of rows[headerRowIndex]) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<th>${formattedCell}</th>\n`;
+      }
+      html += '</tr>\n</thead>\n';
+      
+      // Skip header row in body
+      rows.splice(headerRowIndex, 1);
+    }
+    
+    // Generate body
+    html += '<tbody>\n';
+    for (const row of rows) {
+      html += '<tr>\n';
+      for (const cell of row) {
+        const formattedCell = cell
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>');
+        html += `<td>${formattedCell}</td>\n`;
+      }
+      html += '</tr>\n';
+    }
+    html += '</tbody>\n</table>\n';
+    
+    return { html, nextIndex: i };
+  };
+
+  const parseRST = (text: string, snippetId?: string, sectionId?: string): string => {
+    // Convert RST to HTML while preserving math formulas
+    const lines = text.split('\n');
+    const output: string[] = [];
+    let i = 0;
+    let headingCounter = 0;
+    
+    while (i < lines.length) {
+      const line = lines[i];
+      const nextLine = lines[i + 1];
+      
+      // Handle headers with underlines - this is the main RST heading format (check FIRST!)
+      if (nextLine && (nextLine.startsWith('=') || nextLine.startsWith('-') || nextLine.startsWith('~') || nextLine.startsWith('^')) && 
+          nextLine.trim().length > 0) {
+        // Check if it's a valid underline (all same character)
+        const underlineChar = nextLine.trim()[0];
+        if (nextLine.trim() === underlineChar.repeat(nextLine.trim().length)) {
+          // Determine header level based on underline character
+          let headerLevel = 2; // default for =
+          if (underlineChar === '-') headerLevel = 2;  // subsection
+          else if (underlineChar === '~') headerLevel = 3;  // subsubsection
+          else if (underlineChar === '^') headerLevel = 4;
+          
+          const headingText = line.trim();
+          
+          // Convert heading text to slug format for meaningful IDs
+          const headingSlug = headingText.toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+            .replace(/\s+/g, '-'); // Replace spaces with hyphens
+          
+          // Use section-based ID for section headers to match BookTOC format
+          const headingId = snippetId ? `snippet-${snippetId}-${headingSlug}` : `${sectionId || 'section'}-${headingSlug}`;
+          output.push(`<h${headerLevel} id="${headingId}">${headingText}</h${headerLevel}>`);
+          i += 2; // Skip the underline
+          continue;
+        }
+      }
+      
+      // Handle RST tables (grid tables) - check after headers
+      if (line.includes('+') && line.includes('-')) {
+        const tableResult = parseRSTTable(lines, i);
+        if (tableResult.html) {
+          output.push(tableResult.html);
+          i = tableResult.nextIndex;
+          continue;
+        }
+      }
+      
+      // Handle simple tables (with | separators)
+      if (line.includes('|')) {
+        const tableResult = parseSimpleTable(lines, i);
+        if (tableResult.html) {
+          output.push(tableResult.html);
+          i = tableResult.nextIndex;
+          continue;
+        }
+      }
+      
+      // Handle RST simple tables (with column headers and dash separators)
+      // Only treat as table if the current line has multiple columns (spaces between words)
+      if (nextLine && nextLine.trim().match(/^[=-]+(\s+[=-]+)*$/) && line.trim().includes('  ')) {
+        const tableResult = parseRstSimpleTable(lines, i);
+        if (tableResult.html) {
+          output.push(tableResult.html);
+          i = tableResult.nextIndex;
+          continue;
+        }
+      }
+      
+      // Handle lists - preserve indentation and create proper nested structures
+      if (line.trim().match(/^(\d+\.|\*|\-)\s/)) {
+        const isNumbered = line.trim().match(/^\d+\./);
+        const tag = isNumbered ? 'ol' : 'ul';
+        
+        // Parse the entire list
+        const listItems: string[] = [];
+        let listIndent = line.match(/^(\s*)/)?.[1].length || 0;
+        
+        while (i < lines.length && lines[i].trim()) {
+          const listLine = lines[i];
+          if (listLine.trim().match(/^(\d+\.|\*|\-)\s/)) {
+            let itemContent = listLine.trim().replace(/^(\d+\.|\*|\-)\s/, '');
+            
+            // Apply RST formatting to list items
+            itemContent = itemContent
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+              .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
+              .replace(/`(.*?)`/g, '<code>$1</code>'); // Inline code
+            
+            listItems.push(`<li>${itemContent}</li>`);
+          } else if (listLine.trim()) {
+            // Continuation of list item - apply formatting
+            let continuationContent = listLine.trim();
+            continuationContent = continuationContent
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+              .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
+              .replace(/`(.*?)`/g, '<code>$1</code>'); // Inline code
+            
+            listItems[listItems.length - 1] = listItems[listItems.length - 1].replace('</li>', ` ${continuationContent}</li>`);
+          } else {
+            break;
+          }
+          i++;
+        }
+        
+        output.push(`<${tag}>${listItems.join('')}</${tag}>`);
+        continue;
+      }
+      
+      // Handle regular paragraphs
+      if (line.trim()) {
+        let processedLine = line.trim();
+        
+        // Process the entire line to fix math formulas
+        processedLine = processedLine
+          // Fix broken display math formulas first
+          .replace(/\$\$([^$]*(?:\$\$[^$]*\$\$)*[^$]*)\$\$/g, (match) => {
+            // Remove extra $$ and fix the formula
+            let formula = match.replace(/\$\$/g, '');
+            // Fix common LaTeX syntax issues
+            formula = formula
+              .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '\\frac{$1}{$2}')
+              .replace(/\^([^\s\}]+)/g, '^{$1}')
+              .replace(/_\{([^}]*)\}/g, '_{$1}')
+              .replace(/\{([^\}]+)\}/g, '{$1}');
+            return `$$${formula}$$`;
+          })
+          // Process RST formatting
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+          .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
+          .replace(/`(.*?)`/g, '<code>$1</code>'); // Inline code
+        
+        output.push(`<p>${processedLine}</p>`);
+      }
+      
+      i++;
+    }
+    
+    // Post-process to combine broken math formulas
+    let result = output.join('\n');
+    
+    // Fix broken display math with missing closing
+    result = result.replace(/\$\$([^$]*\$\$[^$]*\$\$)/g, (match) => {
+      const formula = match.replace(/\$\$/g, '');
+      return `$$${formula}$$`;
+    });
+    
+    return result;
   };
 
   if (loading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.loadingMessage}>Loading books...</div>
-      </div>
-    );
+    return <div className={styles.loading}>Loading books...</div>;
   }
 
   if (selectedBook) {
-    // Find the current section
-    const sectionIndex = selectedBook.sections?.findIndex(s => s.id === currentSectionId);
-    const section = sectionIndex !== -1 && sectionIndex !== undefined 
-      ? selectedBook.sections[sectionIndex] 
-      : selectedBook.sections?.[0];
-
     return (
       <div className={styles.pageContainer}>
-        <button onClick={handleBackToGrid} className={styles.backButton}>
-          ← Back to Books
-        </button>
-        
-        <div className={styles.bookContainer}>
-          <div className={styles.bookContent}>
-            <h1 className={styles.bookTitle}>{selectedBook.title}</h1>
-            <div className={styles.bookMeta}>
-              <span className={styles.bookAuthor}>By {selectedBook.author}</span>
-              <span className={styles.bookDate}>{selectedBook.date}</span>
-              <div className={styles.bookTags}>
-                {selectedBook.tags.map(tag => (
-                  <span key={tag} className={styles.tag}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
+        <header className={styles.pageHeader}>
+          <div className={styles.headerSection}>
+            <div className={styles.titleSection}>
+              <Link href="/books" className={styles.titleLink}>
+                <h1 className={styles.title}>Books</h1>
+              </Link>
             </div>
+            <div className={styles.tagsSection}>
+              <TagFilter
+                tags={tags}
+                selectedTag={selectedTag}
+                onTagSelect={setSelectedTag}
+              />
+            </div>
+          </div>
+        </header>
 
-            {/* Render only the current section */}
+        <div className={styles.contentSection}>
+          <aside className={styles.tocAside}>
+            {showTOC && selectedBook && (
+              <BookTOC 
+                book={{
+                  ...selectedBook,
+                  sections: selectedBook.sections || []
+                }}
+                snippets={snippets}
+                snippetsLoading={snippetsLoading}
+                currentSectionId={currentSectionId}
+                onSectionSelect={(sectionId) => {
+                  setCurrentSectionId(sectionId);
+                  // Update URL
+                  router.push({
+                    pathname: router.pathname,
+                    query: { 
+                      book: selectedBook.id,
+                      section: sectionId
+                    }
+                  }, undefined, { });
+                  // Scroll to top
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )}
+          </aside>
+
+          <main className={styles.mainContent}>
+            <article className={styles.article}>
+              <header className={styles.articleHeader}>
+                <h1 className={styles.articleTitle}>{selectedBook.title}</h1>
+                <div className={styles.articleMeta}>
+                  <span className={styles.articleAuthor}>
+                    by {selectedBook.author}
+                  </span>
+                  <time className={styles.articleDate} dateTime={selectedBook.date}>
+                    {new Date(selectedBook.date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </time>
+                </div>
+                {selectedBook.tags && selectedBook.tags.length > 0 && (
+                  <div className={styles.articleTags}>
+                    {selectedBook.tags.map(tag => (
+                      <span key={tag} className={styles.articleTag}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {selectedBook.description && (
+                  <p className={styles.articleDescription}>{selectedBook.description}</p>
+                )}
+              </header>
+
+              <div className={styles.articleContent}>
+                {/* Render only the current section */}
+
                                 {selectedBook && selectedBook.sections && selectedBook.sections.length > 0 && (() => {
 
                                   const sectionIndex = selectedBook.sections.findIndex(s => s.id === currentSectionId);
@@ -282,13 +789,12 @@ const section = sectionIndex !== -1 ? selectedBook.sections[sectionIndex] : sele
                             return (
                               <MathRenderer 
                                 key={index} 
-                                content={htmlContent} 
-                                sectionId={section.id}
+                                content={htmlContent}
                               />
                             );
                           } else if (item.type === 'code-block') {
                             return (
-                              <CodeBlock
+                              <CodeBlock 
                                 key={index}
                                 code={item.content}
                                 language={item.language || 'text'}
@@ -325,103 +831,83 @@ const section = sectionIndex !== -1 ? selectedBook.sections[sectionIndex] : sele
                             
                             if (snippet) {
                               return (
-                                <div key={index} className={styles.snippetCard}>
+                                <div key={index} className={styles.snippetCard} id={`snippet-${snippetId}`}>
                                   <div className={styles.snippetHeader}>
-                                    <h3>{snippet.frontmatter?.title || snippet.title || snippetTitle}</h3>
-                                    <span className={styles.snippetType}>Snippet</span>
+                                    <h3>{snippet.frontmatter?.title || snippet.title}</h3>
+                                    <Link href={`/snippets?id=${snippet.id}`}>
+                                      <button className={styles.viewSnippetBtn}>View Details</button>
+                                    </Link>
                                   </div>
+                                  
+                                  {/* Render snippet content */}
                                   <div className={styles.snippetContent}>
-                                    {snippet.content ? (
+                                    {snippet.content && snippet.content.length > 0 ? (
                                       snippet.content.map((snippetItem: any, snippetIndex: number) => {
                                         if (snippetItem.type === 'text') {
-                                          const snippetHtmlContent = parseRST(snippetItem.content, undefined, snippet.id);
+                                          const snippetHtmlContent = parseRST(snippetItem.content, snippet.id, section.id);
+                                          
                                           return (
                                             <MathRenderer 
                                               key={snippetIndex} 
-                                              content={snippetHtmlContent} 
-                                              sectionId={snippet.id}
+                                              content={snippetHtmlContent}
                                             />
                                           );
                                         } else if (snippetItem.type === 'code-block') {
                                           return (
-                                            <CodeBlock
+                                            <CodeBlock 
                                               key={snippetIndex}
                                               code={snippetItem.content}
                                               language={snippetItem.language || 'text'}
                                             />
                                           );
+                                        } else if (snippetItem.type === 'toctree') {
+                                          // Render toctree for snippets
+                                          return (
+                                            <div key={snippetIndex} className={styles.snippetToctree}>
+                                              <h4>Code Files</h4>
+                                              <ul>
+                                                {snippetItem.content && snippetItem.content.map((entry: string, entryIndex: number) => (
+                                                  <li key={entryIndex}>
+                                                    {entry}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          );
                                         }
                                         return null;
-                                      }) || <em>No content available</em>
+                                      })
                                     ) : (
-                                      <em>No content available</em>
+                                      <p>No content available for this snippet.</p>
                                     )}
                                   </div>
                                 </div>
                               );
                             } else {
-                              // Show not found message if snippet is still loading or not found
-                              if (snippetsLoading) {
-                                return (
-                                  <div key={index} className={styles.snippetCard}>
-                                    <div className={styles.snippetHeader}>
-                                      <h3>Snippet: {snippetTitle}</h3>
-                                      <span className={styles.snippetType}>Snippet</span>
-                                    </div>
-                                    <div className={styles.snippetContent}>
-                                      <em>Loading {snippetId}...</em>
-                                    </div>
+                              // Fallback if snippet not found
+                              return (
+                                <div key={index} className={styles.snippetCard} id={`snippet-${snippetId}`}>
+                                  <div className={styles.snippetHeader}>
+                                    <h3>{snippetTitle}</h3>
                                   </div>
-                                );
-                              } else {
-                                return (
-                                  <div key={index} className={styles.snippetCard}>
-                                    <div className={styles.snippetHeader}>
-                                      <h3>Snippet not found</h3>
-                                      <span className={styles.snippetType}>Error</span>
-                                    </div>
-                                    <div className={styles.snippetContent}>
-                                      <em>Snippet not found: {snippetId}</em>
-                                    </div>
+                                  <div className={styles.snippetContent}>
+                                    <p>Snippet not found or not loaded yet.</p>
                                   </div>
-                                );
-                              }
+                                </div>
+                              );
                             }
                           } else if (item.type === 'toctree') {
-                            // Render table of contents
+                            // Render toctree for sections
                             return (
-                              <div key={index} className={styles.tocContainer}>
-                                <h3>{item.caption}</h3>
-                                <ol className={styles.tocList}>
-                                  {item.entries.map((entry: any, entryIndex: number) => (
-                                    <li key={entryIndex} className={styles.tocItem}>
-                                      {entryIndex + 1}. {entry.title}
+                              <div key={index} className={styles.toctreeContainer}>
+                                <h3>Table of Contents</h3>
+                                <ul>
+                                  {item.content && item.content.map((entry: string, entryIndex: number) => (
+                                    <li key={entryIndex}>
+                                      {entry}
                                     </li>
                                   ))}
-                                </ol>
-                              </div>
-                            );
-                          } else if (item.type === 'embedded-snippet') {
-                            // Render the embedded snippet directly
-                            const snippetTitle = item.title || item.id;
-                            const formattedTitle = snippetTitle.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-                            
-                            const snippetId = item.id || `snippet-${index}`;
-                            
-                            return (
-                              <div key={index} className={styles.embeddedSnippet}>
-                                <div className={styles.embeddedSnippetHeader}>
-                                  <h4>{formattedTitle}</h4>
-                                </div>
-                                <div className={styles.embeddedSnippetContent}>
-                                  {item.content ? (
-                                    <pre>
-                                      <code>{item.content}</code>
-                                    </pre>
-                                  ) : (
-                                    <em>No content available</em>
-                                  )}
-                                </div>
+                                </ul>
                               </div>
                             );
                           }
@@ -431,43 +917,56 @@ const section = sectionIndex !== -1 ? selectedBook.sections[sectionIndex] : sele
                         <p>No content available for this section.</p>
                       )}
                     </section>
-                                  );
-                                })()}
-          </div>
-          
-          <BookTOC 
-            book={selectedBook}
-            snippets={snippets}
-            snippetsLoading={snippetsLoading}
-            currentSectionId={currentSectionId}
-            onSectionSelect={handleSectionSelect}
-          />
+                  );
+                })()}
+              </div>
+            </article>
+          </main>
         </div>
+
+        {showBackToTop && (
+          <button 
+            className={styles.backToTop}
+            onClick={scrollToTop}
+            aria-label="Back to top"
+          >
+            ↑
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div className={styles.pageContainer}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Books</h1>
-        <p className={styles.pageDescription}>
-          Collection of books covering various topics in computer science and mathematics
-        </p>
-      </div>
+      <header className={styles.pageHeader}>
+        <div className={styles.headerSection}>
+          <div className={styles.titleSection}>
+            <h1 className={styles.title}>Books</h1>
+          </div>
+          <div className={styles.tagsSection}>
+            <TagFilter
+              tags={tags}
+              selectedTag={selectedTag}
+              onTagSelect={setSelectedTag}
+            />
+          </div>
+        </div>
+      </header>
 
-      {tags.length > 0 && (
-        <TagFilter
-          tags={tags}
-          selectedTag={selectedTag}
-          onTagSelect={setSelectedTag}
+      <main className={styles.mainContent}>
+        <BookGrid 
+          books={filteredBooks} 
+          onBookClick={handleBookSelect}
         />
-      )}
-
-      <BookGrid books={filteredBooks} onBookSelect={setSelectedBook} />
+      </main>
 
       {showBackToTop && (
-        <button onClick={scrollToTop} className={styles.backToTop}>
+        <button 
+          className={styles.backToTop}
+          onClick={scrollToTop}
+          aria-label="Back to top"
+        >
           ↑
         </button>
       )}

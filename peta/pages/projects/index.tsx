@@ -10,25 +10,73 @@ import withFeatureCheck from '../../hocs/withFeatureCheck';
 interface Project {
   id: string;
   title: string;
+  date: string;
   description: string;
   tags: string[];
-  image?: string;
-  githubUrl?: string;
-  demoUrl?: string;
-  content?: any[];
+  github_url?: string;
+  demo_url?: string;
+  content: any[];
 }
 
 function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tags, setTags] = useState<any[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>('');
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     loadProjectsContent();
   }, []);
+
+  useEffect(() => {
+    // Reset selected project when the route changes (e.g., when clicking the Projects link)
+    const handleRouteChange = (url: string) => {
+      // If navigating to /projects without query params, clear selections
+      if (url === '/projects' || url === '/projects?') {
+        setSelectedTag('');
+        setIsModalOpen(false);
+      }
+    };
+    
+    router.events.on('routeChangeComplete', handleRouteChange);
+    
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router]);
+
+  // Also check on mount
+  useEffect(() => {
+    // If URL is just /projects without query params, clear selections
+    if (router.asPath === '/projects' || router.asPath === '/projects?') {
+      setSelectedTag('');
+    }
+  }, [router.asPath]);
+
+  useEffect(() => {
+    // Check for project query parameter
+    const projectId = router.query.project as string;
+    
+    if (projectId && projects.length > 0) {
+      const project = projects.find(p => p.id === projectId);
+      if (project) {
+        setSelectedProject(project);
+        setIsModalOpen(true);
+      }
+    }
+  }, [router.query.project, projects]);
+
+  useEffect(() => {
+    // When a tag is selected, update URL
+    if (selectedTag) {
+      // Update URL to include tag
+      const url = `/projects?tag=${encodeURIComponent(selectedTag)}`;
+      window.history.pushState({}, '', url);
+    }
+  }, [selectedTag]);
 
   const loadProjectsContent = async () => {
     try {
@@ -40,7 +88,16 @@ function ProjectsPage() {
       const projectsData = await projectsResponse.json();
       const tagsData = await tagsResponse.json();
       
-      setProjects(projectsData);
+      // Sort projects by date (newest first)
+      const sortedProjects = Array.isArray(projectsData) 
+        ? projectsData.sort((a: Project, b: Project) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateB.getTime() - dateA.getTime(); // Newest first
+          })
+        : projectsData;
+      
+      setProjects(sortedProjects);
       setTags(tagsData);
     } catch (error) {
       console.error('Error loading projects:', error);
@@ -53,81 +110,67 @@ function ProjectsPage() {
     ? projects.filter(project => project.tags.includes(selectedTag))
     : projects;
 
-  const handleProjectClick = (project: Project) => {
+  const handleProjectClick = (project: Project | any) => {
     setSelectedProject(project);
-    // Update URL with project parameter
-    router.push(
-      {
-        pathname: router.pathname,
-        query: { ...router.query, project: project.id },
-      },
-      undefined,
-      { shallow: true }
-    );
+    setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
+  const handleModalClose = () => {
+    setIsModalOpen(false);
     setSelectedProject(null);
-    // Remove project parameter from URL
-    const { project, ...restQuery } = router.query;
-    router.push(
-      {
-        pathname: router.pathname,
-        query: restQuery,
-      },
-      undefined,
-      { shallow: true }
-    );
   };
 
-  // Check for project parameter in URL on mount
-  useEffect(() => {
-    if (router.query.project && projects.length > 0) {
-      const project = projects.find(p => p.id === router.query.project);
-      if (project) {
-        setSelectedProject(project);
-      }
-    }
-  }, [router.query.project, projects]);
-
-  if (loading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.loadingMessage}>Loading projects...</div>
-      </div>
-    );
-  }
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setSelectedTag(''); // Clear selected tag when clicking title
+    // Update the URL to just /projects
+    window.history.pushState({}, '', '/projects');
+  };
 
   return (
     <div className={styles.pageContainer}>
-      <div className={styles.pageHeader}>
-        <Link href="/projects" className={styles.titleLink}>
-          <h1 className={styles.pageTitle}>Projects</h1>
-        </Link>
-        <p className={styles.pageDescription}>
-          Collection of featured projects and showcases
-        </p>
-      </div>
-
-      {tags.length > 0 && (
-        <TagFilter
-          tags={tags}
-          selectedTag={selectedTag}
-          onTagSelect={setSelectedTag}
-        />
-      )}
-
-      <ProjectGrid 
-        projects={filteredProjects} 
-        onProjectClick={handleProjectClick} 
+      {/* Section 1: Header with title and tags */}
+      <header className={styles.pageHeader}>
+        <div className={styles.headerSection}>
+          <Link href="/projects" onClick={handleTitleClick} className={styles.titleLink}>
+            <h1 className={styles.title}>Projects</h1>
+          </Link>
+          <div className={styles.tagsSection}>
+            <TagFilter
+              tags={tags}
+              selectedTag={selectedTag}
+              onTagSelect={setSelectedTag}
+            />
+          </div>
+        </div>
+      </header>
+      
+      {/* Section 2: Full-width cards grid */}
+      <main className={styles.mainContentFull}>
+        {selectedTag && (
+          <div className={styles.tagInfo}>
+            <p>Showing projects tagged with <strong>{selectedTag}</strong></p>
+          </div>
+        )}
+        
+        {loading ? (
+          <div className={styles.loading}>
+            <p>Loading projects...</p>
+          </div>
+        ) : (
+          <ProjectGrid 
+            projects={filteredProjects} 
+            onProjectClick={handleProjectClick}
+          />
+        )}
+      </main>
+      
+      {/* Modal for project details */}
+      <ProjectModal
+        project={selectedProject}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
       />
-
-      {selectedProject && (
-        <ProjectModal
-          project={selectedProject}
-          onClose={handleCloseModal}
-        />
-      )}
     </div>
   );
 }

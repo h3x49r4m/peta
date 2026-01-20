@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const indexPath = path.join(folderPath, 'index.rst');
         
         if (await fs.pathExists(indexPath)) {
-          const content = await fs.readFile(indexPath, 'utf8');
+          const content = await fs.readFile(indexPath, 'utf-8');
           const parsed = await parseRstFallback(content);
           
           // Parse toctree to get section order
@@ -79,7 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           // Read all other section files into a map
           for (const sectionFile of sectionFiles) {
             if (!sectionFile.endsWith('index.rst')) {
-              const sectionContent = await fs.readFile(sectionFile, 'utf8');
+              const sectionContent = await fs.readFile(sectionFile, 'utf-8');
               const sectionParsed = await parseRstFallback(sectionContent);
               const sectionName = path.basename(sectionFile, '.rst');
               sectionMap.set(sectionName, {
