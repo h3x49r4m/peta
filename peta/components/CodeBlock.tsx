@@ -57,10 +57,13 @@ export default function CodeBlock({ code, language }: CodeBlockProps) {
           <pre className={styles.pre} style={style}>
             <code className={className}>
               {tokens.map((line, i) => (
-                <div key={i} {...getLineProps({ line })}>
-                  {line.map((token, key) => (
-                    <span key={key} {...getTokenProps({ token })} />
-                  ))}
+                <div key={i} {...getLineProps({ line })} className={styles.line}>
+                  <span className={styles.lineNumber}>{i + 1}</span>
+                  <span className={styles.lineContent}>
+                    {line.map((token, key) => (
+                      <span key={key} {...getTokenProps({ token })} />
+                    ))}
+                  </span>
                 </div>
               ))}
             </code>

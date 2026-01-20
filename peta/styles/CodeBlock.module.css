@@ -10,6 +10,53 @@
   font-family: 'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', monospace;
 }
 
+/* Line number styles */
+.line {
+  display: flex;
+  min-width: 100%;
+  position: relative;
+}
+
+.lineNumber {
+  display: inline-block;
+  width: 3em;
+  padding-right: 1em;
+  text-align: right;
+  color: #5c6370;
+  background-color: #282c34;
+  border-right: 1px solid #3e4451;
+  user-select: none;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.lineContent {
+  display: inline-block;
+  padding-left: 1em;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Hover effect for lines */
+.line:hover {
+  background-color: rgba(110, 115, 130, 0.1);
+}
+
+/* Ensure proper spacing and alignment */
+.codeBlock :global(.prism-code) {
+  display: flex;
+  flex-direction: column;
+}
+
+.codeBlock :global(.token-line) {
+  display: flex;
+  min-width: 100%;
+  position: relative;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+
 /* Prism.js base styles - applied to our pre and code elements */
 .pre {
   color: #abb2bf;
@@ -106,6 +153,53 @@
   box-shadow: none;
   font-family: 'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', monospace;
 }
+
+/* Line number styles */
+.line {
+  display: flex;
+  min-width: 100%;
+  position: relative;
+}
+
+.lineNumber {
+  display: inline-block;
+  width: 3em;
+  padding-right: 1em;
+  text-align: right;
+  color: #5c6370;
+  background-color: #282c34;
+  border-right: 1px solid #3e4451;
+  user-select: none;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.lineContent {
+  display: inline-block;
+  padding-left: 1em;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Hover effect for lines */
+.line:hover {
+  background-color: rgba(110, 115, 130, 0.1);
+}
+
+/* Ensure proper spacing and alignment */
+.codeBlock :global(.prism-code) {
+  display: flex;
+  flex-direction: column;
+}
+
+.codeBlock :global(.token-line) {
+  display: flex;
+  min-width: 100%;
+  position: relative;
+  padding-left: 0;
+  margin-left: 0;
+}
+
 
 .codeBlock :global(code[class*="language-"]) {
   padding: 0;
