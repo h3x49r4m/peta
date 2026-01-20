@@ -1,0 +1,16 @@
+{
+  "modules": {
+    "books": {
+      "enabled": true
+    },
+    "articles": {
+      "enabled": true
+    },
+    "snippets": {
+      "enabled": true
+    },
+    "projects": {
+      "enabled": true
+    }
+  }
+}

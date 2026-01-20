@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Layout from '../components/Layout';
 import '../styles/globals.css';
 import { useEffect } from 'react';
+import { FeatureProvider } from '../contexts/FeatureContext';
 
 // Add type declarations for KaTeX and Prism
 declare global {
@@ -88,17 +89,19 @@ function MyApp({ Component, pageProps }: AppProps) {
   }, [Component]);
 
   return (
-    <>
-      <Head>
-        <title>Peta</title>
-        <meta name="description" content="High-performance static articles with RST content, math support, and snippets" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
-    </>
+    <FeatureProvider>
+      <>
+        <Head>
+          <title>Peta</title>
+          <meta name="description" content="High-performance static articles with RST content, math support, and snippets" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+      </>
+    </FeatureProvider>
   );
 }
 

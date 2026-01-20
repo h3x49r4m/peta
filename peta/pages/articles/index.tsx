@@ -7,6 +7,7 @@ import MathRenderer from '../../components/MathRenderer';
 import CodeBlock from '../../components/CodeBlock';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import withFeatureCheck from '../../hocs/withFeatureCheck';
 
 interface ArticlePost {
   id: string;
@@ -19,7 +20,7 @@ interface ArticlePost {
   snippet_refs?: string[];
 }
 
-export default function Articles() {
+function ArticlesPage() {
   const [posts, setPosts] = useState<ArticlePost[]>([]);
   const [tags, setTags] = useState<any[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>('');
@@ -610,3 +611,5 @@ const parseRST = (text: string, articleTitle: string, snippetId?: string): strin
     </div>
   );
 }
+
+export default withFeatureCheck(ArticlesPage, { featureName: 'articles' });
