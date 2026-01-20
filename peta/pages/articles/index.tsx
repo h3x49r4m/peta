@@ -28,10 +28,13 @@ export default function Articles() {
   const [renderedContent, setRenderedContent] = useState<string>('');
   const [showTOC, setShowTOC] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [snippets, setSnippets] = useState<any[]>([]);
+  const [snippetsLoading, setSnippetsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     loadArticlesContent();
+    loadSnippets();
   }, []);
 
   useEffect(() => {
@@ -142,6 +145,20 @@ export default function Articles() {
       console.error('Error loading articles content:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSnippets = async () => {
+    try {
+      const response = await fetch('/api/content/snippet');
+      if (response.ok) {
+        const snippetsData = await response.json();
+        setSnippets(snippetsData);
+      }
+    } catch (error) {
+      console.error('Error loading snippets:', error);
+    } finally {
+      setSnippetsLoading(false);
     }
   };
 
@@ -390,118 +407,80 @@ const parseRST = (text: string, articleTitle: string, snippetId?: string): strin
           </div>
         );
       } else if (item.type === 'snippet-card-ref') {
-        // Fallback for old format - Add a placeholder for the snippet with a proper title
+        // Find the snippet from loaded snippets
         const snippetId = item.content;
         const snippetTitle = snippetId.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
         
-        elements.push(
-          <div key={i} className={styles.snippetCard} id={`snippet-${snippetId}`}>
-            <div className={styles.snippetHeader}>
-              <h3>Snippet: {snippetTitle}</h3>
-              <span className={styles.snippetType}>Snippet</span>
-            </div>
-            <div className={styles.snippetContent}>
-              <em>Loading {snippetId}...</em>
-            </div>
-          </div>
-        );
+        // Try to find the snippet in the loaded snippets
+        const snippet = snippets.find((s: any) => {
+          // Check by id
+          if (s.id === snippetId) return true;
+          
+          // Check by snippet_id
+          if (s.frontmatter?.snippet_id === snippetId) return true;
+          
+          // Check by title (exact match)
+          if (s.frontmatter?.title === snippetId) return true;
+          if (s.title === snippetId) return true;
+          
+          // Check by slugified title
+          const snippetSlug = (s.frontmatter?.title || s.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          if (snippetSlug === snippetId) return true;
+          
+          // Check partial match (for cases like "wave-function" matching "The Wave Function")
+          const title = (s.frontmatter?.title || s.title || '').toLowerCase();
+          const searchTerm = snippetId.toLowerCase().replace(/-/g, ' ');
+          if (title.includes(searchTerm) || searchTerm.includes(title)) return true;
+          
+          return false;
+        });
         
-        // Load snippet content asynchronously
-        (async () => {
-          try {
-            const response = await fetch('/api/content/snippet');
-            const snippets = await response.json();
-            
-            // Try multiple ways to find the snippet
-            let snippet = snippets.find((s: any) => {
-              // Check by id
-              if (s.id === snippetId) return true;
-              
-              // Check by snippet_id
-              if (s.frontmatter?.snippet_id === snippetId) return true;
-              
-              // Check by title (exact match)
-              if (s.frontmatter?.title === snippetId) return true;
-              if (s.title === snippetId) return true;
-              
-              // Check by slugified title
-              const snippetSlug = (s.frontmatter?.title || s.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-              if (snippetSlug === snippetId) return true;
-              
-              // Check partial match (for cases like "wave-function" matching "The Wave Function")
-              const snippetTitle = (s.frontmatter?.title || s.title || '').toLowerCase();
-              const searchTerm = snippetId.toLowerCase().replace(/-/g, ' ');
-              if (snippetTitle.includes(searchTerm) || searchTerm.includes(snippetTitle)) return true;
-              
-              return false;
-            });
-            
-            if (snippet) {
-              const placeholder = document.getElementById(`snippet-${snippetId}`);
-              if (placeholder) {
-                // Create a temporary div to render the content
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = `
-                  <div class="snippet-header">
-                    <h3>${snippet.frontmatter?.title || snippet.title}</h3>
-                    <span class="snippet-type">Snippet</span>
-                  </div>
-                  <div class="snippet-content">
-                    ${snippet.content?.map((c: any) => {
-                      if (c.type === 'text') {
-                        return parseRST(c.content, articleTitle, `snippet-${snippetId}`);
-                      }
-                      return '';
-                    }).join('') || ''}
-                  </div>
-                `;
-                
-                // Apply CSS module classes
-                const header = tempDiv.querySelector('.snippet-header');
-                const headerType = tempDiv.querySelector('.snippet-type');
-                const content = tempDiv.querySelector('.snippet-content');
-                
-                if (header) header.className = styles.snippetHeader;
-                if (headerType) headerType.className = styles.snippetType;
-                if (content) content.className = styles.snippetContent;
-                
-                // Replace placeholder content
-                placeholder.innerHTML = '';
-                placeholder.appendChild(tempDiv.firstElementChild as Node);
-              }
-            } else {
-              const placeholder = document.getElementById(`snippet-${snippetId}`);
-              if (placeholder) {
-                placeholder.innerHTML = `
-                  <div class="${styles.snippetHeader}">
-                    <h3>Snippet not found</h3>
-                    <span class="${styles.snippetType}">Error</span>
-                  </div>
-                  <div class="${styles.snippetContent}">
-                    <em>Snippet not found: ${snippetId}</em>
-                  </div>
-                `;
-              }
-            }
-          } catch (error) {
-            console.error('Error loading snippet:', error);
-            const placeholder = document.getElementById(`snippet-${snippetId}`);
-                          if (placeholder) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = styles.snippetCard;
-                            errorDiv.innerHTML = `
-                              <div class="${styles.snippetHeader}">
-                                <h3>Error loading snippet</h3>
-                                <span class="${styles.snippetType}">Error</span>
-                              </div>
-                              <div class="${styles.snippetContent}">
-                                <em>Error loading snippet: ${snippetId}</em>
-                              </div>
-                            `;
-                            placeholder.innerHTML = '';
-                            placeholder.appendChild(errorDiv);
-                          }          }
-        })();
+        if (snippet) {
+          elements.push(
+            <div key={i} className={styles.snippetCard} id={`snippet-${snippetId}`}>
+              <div className={styles.snippetHeader}>
+                <h3>{snippet.frontmatter?.title || snippet.title}</h3>
+                <span className={styles.snippetType}>Snippet</span>
+              </div>
+              <div className={styles.snippetContent}>
+                {snippet.content?.map((c: any, idx: number) => {
+                  if (c.type === 'text') {
+                    const htmlContent = parseRST(c.content, articleTitle, `snippet-${snippetId}`);
+                    return <MathRenderer key={idx} content={htmlContent} />;
+                  }
+                  return null;
+                }) || <em>No content available</em>}
+              </div>
+            </div>
+          );
+        } else {
+          // Show not found message if snippet is still loading or not found
+          if (snippetsLoading) {
+            elements.push(
+              <div key={i} className={styles.snippetCard}>
+                <div className={styles.snippetHeader}>
+                  <h3>Snippet: {snippetTitle}</h3>
+                  <span className={styles.snippetType}>Snippet</span>
+                </div>
+                <div className={styles.snippetContent}>
+                  <em>Loading {snippetId}...</em>
+                </div>
+              </div>
+            );
+          } else {
+            elements.push(
+              <div key={i} className={styles.snippetCard}>
+                <div className={styles.snippetHeader}>
+                  <h3>Snippet not found</h3>
+                  <span className={styles.snippetType}>Error</span>
+                </div>
+                <div className={styles.snippetContent}>
+                  <em>Snippet not found: {snippetId}</em>
+                </div>
+              </div>
+            );
+          }
+        }
       } else {
         // Handle other content types
         elements.push(
@@ -558,6 +537,8 @@ const parseRST = (text: string, articleTitle: string, snippetId?: string): strin
                 <TableOfContents 
                   content={selectedPost.content} 
                   postTitle={selectedPost.title}
+                  snippets={snippets}
+                  snippetsLoading={snippetsLoading}
                 />
               )}
             </aside>

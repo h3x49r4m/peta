@@ -14,11 +14,15 @@ interface TableOfContentsProps {
 
   postTitle?: string;
 
+  snippets?: any[];
+
+  snippetsLoading?: boolean;
+
 }
 
 
 
-export default function TableOfContents({ content, postTitle }: TableOfContentsProps) {
+export default function TableOfContents({ content, postTitle, snippets = [], snippetsLoading = false }: TableOfContentsProps) {
 
   const [headings, setHeadings] = useState<TOCItem[]>([]);
 
@@ -109,37 +113,145 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
           }
 
-        } else if (item.type === 'embedded-snippet') {
+        } else if (item.type === 'embedded-snippet' || item.type === 'snippet-card-ref') {
 
-                  // Add snippet as a heading
+                                  // Add snippet as a heading
+
+        
+
+                                  
+
+        
+
+                
+
+        
+
+                        
+
+        
+
+                                            const snippetTitle = item.type === 'embedded-snippet' 
+
+        
+
+                                              ? (item.title || item.id)
+
+        
+
+                                              : item.content; // snippet-card-ref stores ID in content
+
+        
+
+                                  
+
+        
+
+                
+
+        
+
+                        
+
+        
+
+                
+
+        
+
+                                            const formattedTitle = snippetTitle.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+        
+
+                                  
+
+        
+
+                
+
+        
+
+                        
+
+        
+
+                
+
+        
+
+                                            const snippetId = item.type === 'embedded-snippet'
+
+        
+
+                                              ? (item.id || `snippet-${Date.now()}`)
+
+        
+
+                                              : `snippet-${snippetTitle}`; // snippet-card-ref
+
+        
 
                   
 
         
 
-                            const snippetTitle = item.title || item.id;
+                            
+
+        
 
                   
 
         
 
-                            const formattedTitle = snippetTitle.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-
-                  
+                            // Collect snippet headers
 
         
 
-                            const snippetId = item.id || `snippet-${Date.now()}`;
+                            const snippetChildren: TOCItem[] = [];
 
-          
+                            
 
-                    
+                            // Find the actual snippet data
 
-          
+                            const snippetData = item.type === 'embedded-snippet' 
 
-                    // Collect snippet headers
+                              ? item // Already has content
 
-                    const snippetChildren: TOCItem[] = [];
+                              : snippets.find((s: any) => {
+
+                                  // Try multiple ways to find the snippet
+
+                                  if (s.id === snippetTitle) return true;
+
+                                  if (s.frontmatter?.snippet_id === snippetTitle) return true;
+
+                                  if (s.frontmatter?.title === snippetTitle) return true;
+
+                                  if (s.title === snippetTitle) return true;
+
+                                  
+
+                                  // Check by slugified title
+
+                                  const snippetSlug = (s.frontmatter?.title || s.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+                                  if (snippetSlug === snippetTitle) return true;
+
+                                  
+
+                                  // Check partial match
+
+                                  const title = (s.frontmatter?.title || s.title || '').toLowerCase();
+
+                                  const searchTerm = snippetTitle.toLowerCase().replace(/-/g, ' ');
+
+                                  if (title.includes(searchTerm) || searchTerm.includes(title)) return true;
+
+                                  
+
+                                  return false;
+
+                                });
 
           
 
@@ -147,11 +259,47 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
           
 
-                    if (item.content && Array.isArray(item.content)) {
+                              
 
           
 
-                      item.content.forEach((c: any) => {
+                    
+
+          
+
+                                        const snippetContent = item.type === 'embedded-snippet' 
+
+          
+
+                                          ? item.content
+
+          
+
+                                          : snippetData?.content;
+
+          
+
+                                          
+
+          
+
+                                        if (snippetContent && Array.isArray(snippetContent)) {
+
+          
+
+                    
+
+          
+
+                              
+
+          
+
+                    
+
+          
+
+                                          snippetContent.forEach((c: any) => {
 
           
 
@@ -317,7 +465,7 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
           
 
-                    } else if (item.content && typeof item.content === 'string') {
+                    } else if (snippetContent && typeof snippetContent === 'string') {
 
           
 
@@ -325,7 +473,7 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
           
 
-                      const snippetLines = item.content.split('\n');
+                      const snippetLines = snippetContent.split('\n');
 
           
 
@@ -593,7 +741,7 @@ export default function TableOfContents({ content, postTitle }: TableOfContentsP
 
     };
 
-  }, [content]);
+  }, [content, snippets, snippetsLoading]);
 
   useEffect(() => {
     // Add IDs to headings in the DOM
