@@ -457,7 +457,7 @@ export default function BookTOC({ book, snippets = [], snippetsLoading = false, 
                   <button 
                     className={`${styles.navButton} ${styles.nextButton}`}
                     onClick={() => {
-                      const currentIndex = book.sections.findIndex(s => s => s.id === currentSectionId);
+                      const currentIndex = book.sections.findIndex(s => s.id === currentSectionId);
                       if (currentIndex < book.sections.length - 1) {
                         const nextSection = book.sections[currentIndex + 1];
                         if (onSectionSelect) {
