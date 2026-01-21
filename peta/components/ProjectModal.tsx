@@ -192,6 +192,11 @@ export default function ProjectModal({ project, isOpen, onClose }: ProjectModalP
               <time className={styles.modalDate} dateTime={project.date}>
                 {formatDate(project.date)}
               </time>
+              {project.author && (
+                <span className={styles.modalAuthor}>
+                  by {project.author}
+                </span>
+              )}
               
               {project.tags && project.tags.length > 0 && (
                 <div className={styles.modalTags}>

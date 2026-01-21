@@ -212,6 +212,11 @@ export default function SnippetModal({ snippet, isOpen, onClose }: SnippetModalP
               <time className={styles.modalDate} dateTime={snippet.date}>
                 {formatDate(snippet.date)}
               </time>
+              {snippet.author && (
+                <span className={styles.modalAuthor}>
+                  by {snippet.author}
+                </span>
+              )}
               
               {snippet.tags && snippet.tags.length > 0 && (
                 <div className={styles.modalTags}>

@@ -37,6 +37,7 @@ To include a snippet, use:
 title: "{{title}}"
 date: {{date}}
 tags: []
+author: "Anonymous"
 ---
 
 {{title}}
@@ -62,6 +63,7 @@ date: {{date}}
 tags: []
 github_url: ""
 demo_url: ""
+author: "Anonymous"
 ---
 
 {{title}}

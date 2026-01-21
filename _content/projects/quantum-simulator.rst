@@ -2,6 +2,7 @@
 title: "Quantum Circuit Simulator"
 date: 2023-03-01
 tags: ["quantum", "computing", "simulation", "javascript"]
+author: Anonymous
 github_url: "https://github.com/example/quantum-simulator"
 demo_url: "https://quantum-simulator.example.com"
 ---

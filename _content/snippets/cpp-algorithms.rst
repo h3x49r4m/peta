@@ -2,6 +2,7 @@
 title: C++ Algorithms
 date: 2026-01-19
 tags: [cpp, algorithms, data-structures]
+author: "Anonymous"
 ---
 
 C++ Algorithms Example
