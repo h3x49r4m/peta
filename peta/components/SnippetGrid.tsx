@@ -40,12 +40,21 @@ export default function SnippetGrid({ snippets, onSnippetClick }: SnippetGridPro
   };
 
   const renderContent = (content: any[]) => {
-    // Extract text content from the content array
-    return content
+    // Extract and clean text content from the content array
+    const textContent = content
       .filter(item => item.type === 'text' && item.content)
       .map(item => item.content)
       .join(' ')
-      .substring(0, 200) + '...';
+      .replace(/\n+/g, ' ') // Replace multiple newlines with spaces
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .trim();
+    
+    // Return first 200 characters with ellipsis if longer
+    if (textContent.length > 200) {
+      return textContent.substring(0, 200) + '...';
+    }
+    
+    return textContent || 'No content available';
   };
 
   const handleCardClick = (snippet: Snippet) => {
