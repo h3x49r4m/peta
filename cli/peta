@@ -82,8 +82,13 @@ start_dev() {
     cd "$PROJECT_ROOT/peta"
     if [ -f "package.json" ]; then
         print_info "Processing content..."
-        node scripts/process-content.js
+        if ! node scripts/process-content.js; then
+            print_error "Content processing failed"
+            exit 1
+        fi
+        print_info "Content processed successfully!"
         print_info "Starting development server..."
+        print_info "Server will be available at http://localhost:3000"
         npm run dev
     else
         print_error "package.json not found in peta directory"
