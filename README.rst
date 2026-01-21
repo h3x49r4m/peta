@@ -71,11 +71,31 @@ Prerequisites
 ~~~~~~~~~~~~~~
 
 - Node.js 16+ 
-- Rust and wasm-pack (for RST processing)
 - Python 3.9+ (for math rendering)
+- Rust and wasm-pack (optional, for rebuilding WASM modules)
 
-Installing Rust
-~~~~~~~~~~~~~~~
+**Note**: WebAssembly (WASM) modules are included in the repository for immediate use. Rust and wasm-pack are only needed if you want to rebuild the WASM modules from source.
+
+WebAssembly (WASM) Support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Peta uses WebAssembly for high-performance RST (reStructuredText) parsing. The WASM modules provide 10-20x faster processing compared to JavaScript alternatives.
+
+**WASM Files Included**
+
+The repository includes pre-compiled WASM files, so you can use Peta immediately without installing Rust or wasm-pack:
+
+- ``peta/processors/wasm-bindings/rst_parser_bg.wasm`` - Main WASM module
+- ``peta/processors/wasm-bindings/rst_parser.js`` - JavaScript bindings
+- ``peta/processors/wasm-bindings/rst-parser.js`` - High-level parser interface
+
+**Fallback Support**
+
+If WASM files are missing or unavailable, Peta automatically falls back to a JavaScript-based RST parser. This fallback provides full functionality but with reduced performance.
+
+**Rebuilding WASM (Optional)**
+
+If you want to rebuild the WASM modules from source:
 
 1. Install Rust using rustup (recommended)::
 
@@ -87,18 +107,18 @@ Installing Rust
     rustc --version
     cargo --version
 
-Installing wasm-pack
-~~~~~~~~~~~~~~~~~~~
-
-1. Install wasm-pack::
+3. Install wasm-pack::
 
     curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-2. Verify installation::
+4. Verify installation::
 
     wasm-pack --version
 
-Note: The Rust and wasm-pack tools compile the RST parser to WebAssembly, providing 10-20x faster processing compared to JavaScript alternatives.
+5. Navigate to the WASM source directory and rebuild::
+
+    cd peta/processors/rst-parser
+    wasm-pack build --target nodejs --out-dir ../wasm-bindings
 
 Installation
 ~~~~~~~~~~~~
@@ -309,19 +329,30 @@ Creating a New Site
 
 Initialize a new Peta site with all directories and dependencies::
 
-    ./cli/peta init site /path/to/my-site
-    ./cli/peta init site ./my-blog
-
-This creates a complete site structure with:
-- ``_content/`` - Content directories with example content
-- ``cli/`` - CLI tools for content management
-- ``peta/`` - Next.js application with all dependencies installed
-- ``LICENSE``, ``README.rst``, ``.gitignore`` - Project files
-
-After creating a new site::
-
-    cd my-blog
+    ./cli/peta init site my-new-site
+    cd my-new-site
     ./cli/peta dev
+
+This creates a complete site structure and starts the development server at http://localhost:3000
+
+**What's Included**
+
+When creating a new site, the following is automatically set up:
+
+- WebAssembly files for RST parsing (copied from source)
+- All necessary dependencies installed via npm
+- Content directories with example articles, snippets, projects, and books
+- Configuration files ready for customization
+
+**WASM Setup**
+
+The initialization process automatically:
+
+1. Copies WASM files from the source project
+2. Verifies WASM module integrity
+3. Falls back to JavaScript parser if WASM files are missing
+
+This ensures your new site works immediately without requiring additional setup.
 
 Creating Content
 ~~~~~~~~~~~~~~~~
@@ -479,6 +510,12 @@ The architecture is optimized for handling 10M+ articles:
 - **Content Load**: 1-2 seconds (first chunk)
 - **Search Results**: <500ms (client-side)
 
+**WASM Performance**
+- **RST Parsing**: 10-20x faster than JavaScript alternatives
+- **Large Documents**: Handles multi-MB RST files efficiently
+- **Memory Usage**: Low memory footprint with streaming parser
+- **Fallback Performance**: JavaScript fallback provides full functionality with reduced speed
+
 **Optimizations**
 - Content chunking for efficient loading
 - Math formula caching (SVG generation)
@@ -486,6 +523,7 @@ The architecture is optimized for handling 10M+ articles:
 - Code splitting and lazy loading
 - Service worker caching support
 - Feature-based code splitting
+- Automatic WASM fallback for compatibility
 
 Documentation
 -------------
@@ -514,7 +552,14 @@ Common issues:
 - **Math not rendering**: Check that the math cache is properly generated during build
 - **Content not loading**: Verify that API routes are correctly exported in the static build
 - **Feature flags not working**: Check ``/api/config/features`` endpoint and configuration file
-- **RST parsing errors**: Verify Rust and wasm-pack are properly installed
+- **RST parsing errors**: 
+  - Verify WASM files exist in ``peta/processors/wasm-bindings/``
+  - If WASM is missing, the system will automatically use JavaScript fallback
+  - Check browser console for WASM loading errors
+- **"Cannot find module '../processors/wasm-bindings/rst-parser'"**: 
+  - This occurs when WASM files are missing from a new site
+  - Run ``./cli/peta init site`` again or manually copy WASM files
+  - The fallback parser will be used automatically in newer versions
 
 Contributing
 ------------
