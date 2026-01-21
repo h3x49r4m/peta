@@ -4,6 +4,31 @@ import SearchBar from '../components/SearchBar';
 import ContentGrid from '../components/ContentGrid';
 import styles from '../styles/Home.module.css';
 
+interface SiteConfig {
+  site: {
+    name: string;
+    description: string;
+    url: string;
+    logo?: string;
+    favicon?: string;
+  };
+  author: {
+    name: string;
+    email: string;
+    url?: string;
+  };
+  social: {
+    github?: string;
+    twitter?: string;
+    linkedin?: string;
+    x?: string;
+  };
+  footer: {
+    copyright: string;
+    customText?: string;
+  };
+}
+
 interface ContentItem {
   id: string;
   title: string;
@@ -28,8 +53,22 @@ export default function Home() {
   const [projectsTags, setProjectsTags] = useState<TagData[]>([]);
   const [booksTags, setBooksTags] = useState<TagData[]>([]);
   const [tagsLoading, setTagsLoading] = useState(true);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
 
   useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const response = await fetch('/api/config/site');
+        const config = await response.json();
+        setSiteConfig(config);
+      } catch (error) {
+        console.error('Error loading site configuration:', error);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+
     const loadTags = async () => {
       try {
         const [articlesResponse, snippetsResponse, projectsResponse, booksResponse] = await Promise.all([
@@ -59,6 +98,7 @@ export default function Home() {
       }
     };
 
+    loadConfig();
     loadTags();
   }, []);
 
@@ -150,8 +190,27 @@ export default function Home() {
     );
   };
 
+  if (configLoading || !siteConfig) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading}>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
+      <section className={styles.heroSection}>
+        <h1 className={styles.heroTitle}>
+          Welcome to {siteConfig.site.name}
+        </h1>
+        <p className={styles.heroDescription}>
+          {siteConfig.site.description}
+        </p>
+      </section>
+
       <section className={styles.searchSection}>
         <SearchBar 
           value={searchQuery}

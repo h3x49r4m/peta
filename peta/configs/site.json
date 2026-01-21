@@ -1,0 +1,23 @@
+{
+  "site": {
+    "name": "Peta",
+    "description": "High-Performance Static Website Engine",
+    "url": "https://h3x49r4m.github.io/peta",
+    "logo": null,
+    "favicon": null
+  },
+  "author": {
+    "name": "Peta Team",
+    "email": "contact@example.com",
+    "url": null
+  },
+  "social": {
+    "github": "https://github.com/h3x49r4m/peta",
+    "linkedin": null,
+    "x": null
+  },
+  "footer": {
+    "copyright": "© 2026 Peta. All rights reserved.",
+    "customText": null
+  }
+}

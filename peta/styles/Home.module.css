@@ -4,6 +4,34 @@
   width: 100%;
 }
 
+.heroSection {
+  text-align: center;
+  margin-bottom: var(--spacing-12);
+  padding: var(--spacing-12) 0;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(14, 165, 233, 0.05) 100%);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-12);
+}
+
+.heroTitle {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-4);
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--primary-color) 0%, rgba(14, 165, 233, 0.8) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heroDescription {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
 .searchSection {
   margin-bottom: var(--spacing-12);
   text-align: center;
@@ -92,5 +120,17 @@
   
   .sectionTitle {
     font-size: 1.75rem;
+  }
+  
+  .heroSection {
+    padding: var(--spacing-8) var(--spacing-4);
+  }
+  
+  .heroTitle {
+    font-size: 2rem;
+  }
+  
+  .heroDescription {
+    font-size: 1.125rem;
   }
 }
