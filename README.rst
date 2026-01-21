@@ -158,7 +158,7 @@ This creates a complete site structure and starts the development server at http
     # or using the CLI tool
     peta build
 
-   The static files will be generated in the ``out/`` directory.
+   The static files will be generated in the ``_build/`` directory.
 
 Project Structure
 -----------------
@@ -456,33 +456,119 @@ For detailed API documentation, see ``docs/features/api-endpoints.rst``.
 Deployment
 ----------
 
+Deployment
+----------
+
 The site is designed for GitHub Pages deployment with automated CI/CD.
 
 GitHub Pages Deployment
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+Step-by-Step Deployment Guide
+-----------------------------
+
+**Step 1: Fork or Create Repository**
+
+1. Fork the Peta repository to your GitHub account, or
+2. Create a new repository and push your Peta site code
+
+**Step 2: Configure GitHub Actions Workflow**
+
+1. Ensure the workflow file exists at ``peta/.github/workflows/build.yml``:
+
+.. code-block:: yaml
+
+    name: Build and Deploy to GitHub Pages
+    
+    on:
+      push:
+        branches: [ main ]
+      pull_request:
+        branches: [ main ]
+    
+    jobs:
+      build-and-deploy:
+        runs-on: ubuntu-latest
+        
+        steps:
+        - name: Checkout
+          uses: actions/checkout@v3
+          
+        - name: Setup Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: '18'
+            cache: 'npm'
+            cache-dependency-path: peta/package-lock.json
+            
+        - name: Install Rust
+          uses: actions-rs/toolchain@v1
+          with:
+            toolchain: stable
+            
+        - name: Install wasm-pack
+          run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        
+        - name: Build site
+          run: |
+            cd peta
+            npm install
+            npm run build
+            npm run export
+            
+        - name: Deploy to GitHub Pages
+          uses: peaceiris/actions-gh-pages@v3
+          if: github.ref == 'refs/heads/main'
+          with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            publish_dir: ./_build
+            cname: your-site.github.io  # Optional: remove if not using custom domain
+
+**Step 3: Enable GitHub Pages**
+
+1. Go to your repository on GitHub
+2. Click **Settings** tab
+3. Scroll down to **Pages** section
+4. Under **Build and deployment**, set **Source** to **GitHub Actions**
+5. GitHub will now use the workflow to build and deploy your site
+
+**Step 4: Configure Custom Domain (Optional)**
+
+1. In your repository, go to **Settings** → **Pages**
+2. Under **Custom domain**, enter your domain (e.g., ``yourblog.com``)
+3. Update the ``cname`` field in the workflow file if needed
+4. Configure DNS settings as instructed by GitHub
+
+**Step 5: Verify Deployment**
+
+1. Push changes to the main branch:
+
+.. code-block:: bash
+
+    git add .
+    git commit -m "Deploy site to GitHub Pages"
+    git push origin main
+
+2. Check the **Actions** tab to see the build progress
+3. Once complete, your site will be available at:
+   - ``https://yourusername.github.io/your-repo`` (default)
+   - ``https://your-custom-domain.com`` (if configured)
+
+**Step 6: Troubleshooting Common Issues**
+
+- **Build fails**: Check the Actions tab for error logs
+- **404 errors**: Ensure the workflow is using the correct ``publish_dir`` (``./_build``)
+- **Custom domain not working**: Verify DNS configuration and CNAME file
+- **Math formulas not rendering**: Check that WASM files are included in the build
+
 Automatic Deployment
 -------------------
 
-The project includes a pre-configured GitHub Actions workflow in ``peta/.github/workflows/build.yml`` that automatically builds and deploys the site to GitHub Pages when changes are pushed to the main branch.
+The GitHub Actions workflow automatically:
 
-To enable automatic deployment:
-
-1. **Enable GitHub Pages** in your repository:
-
-   - Go to your repository on GitHub
-   - Click **Settings** → **Pages**
-   - Under **Build and deployment**, set **Source** to **GitHub Actions**
-
-2. **Configure Custom Domain** (optional):
-
-   - Edit the ``cname`` field in ``peta/.github/workflows/build.yml``
-   - Or configure it in **Settings** → **Pages** → **Custom domain**
-
-3. **Push Changes**:
-
-   - Any push to the main branch triggers the build and deployment
-   - The workflow builds the site, processes content, renders math, and deploys
+1. **Triggers** on pushes to the main branch
+2. **Builds** the entire site with all content processing
+3. **Deploys** to GitHub Pages with each update
 
 Deployment Workflow
 ------------------
@@ -494,8 +580,23 @@ The deployment process includes:
 3. **Math Rendering**: Convert LaTeX formulas to SVG
 4. **Snippet Resolution**: Process snippet references and embeddings
 5. **Next.js Build**: Generate static site with optimized chunks
-6. **Static Export**: Export to ``peta/out/`` directory
+6. **Static Export**: Export to ``_build/`` directory
 7. **GitHub Pages**: Deploy to GitHub Pages with Fastly CDN
+
+**Manual Deployment (Alternative)**
+
+If you prefer not to use GitHub Actions:
+
+.. code-block:: bash
+
+    # Build the site locally
+    cd peta
+    npm install
+    npm run build
+    npm run export
+    
+    # Deploy to gh-pages branch
+    npx gh-pages -d ../_build --dotfiles --repo "git@github.com:username/username.github.io.git"
 
 Performance
 -----------

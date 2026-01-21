@@ -21,22 +21,9 @@ jobs:
         cache: 'npm'
         cache-dependency-path: peta/package-lock.json
         
-    - name: Setup Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-        
-    - name: Install wasm-pack
-      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      
     - name: Install dependencies
       working-directory: ./peta
       run: npm ci
-      
-    - name: Build WebAssembly module
-      working-directory: ./peta/processors/rst-parser
-      run: wasm-pack build --target web --out-dir ../../../wasm-bindings
       
     - name: Process content
       working-directory: ./peta
@@ -45,10 +32,6 @@ jobs:
     - name: Render math
       working-directory: ./peta
       run: node scripts/render-math.js
-      
-    - name: Copy data to out directory
-      working-directory: ./peta
-      run: node scripts/copy-data.js
       
     - name: Build site
       working-directory: ./peta
@@ -62,12 +45,12 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: build-files
-        path: peta/out/
+        path: _build/
         
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main'
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./peta/out
+        publish_dir: ./_build
         cname: peta.example.com
