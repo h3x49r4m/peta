@@ -1,7 +1,7 @@
 {
   "name": "peta",
   "version": "1.0.0",
-  "description": "High-performance static articles with RST content and math support",
+  "description": "High-performance dynamic content engine with RST content and math support",
   "private": true,
   "scripts": {
     "dev": "next dev",

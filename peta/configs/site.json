@@ -1,13 +1,13 @@
 {
   "site": {
     "name": "Peta",
-    "description": "High-Performance Static Website Engine",
+    "description": "High-Performance Dynamic Content Engine",
     "url": "https://h3x49r4m.github.io/peta",
     "logo": null,
     "favicon": null
   },
   "author": {
-    "name": "Peta Team",
+    "name": "Peta",
     "email": "contact@example.com",
     "url": null
   },

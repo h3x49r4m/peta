@@ -1,13 +1,39 @@
-name: Build and Test
+name: Lint and Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  build-and-test:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: peta/package-lock.json
+        
+    - name: Install dependencies
+      working-directory: ./peta
+      run: npm ci
+      
+    - name: Run ESLint
+      working-directory: ./peta
+      run: npm run lint
+      
+    - name: Check TypeScript
+      working-directory: ./peta
+      run: npm run type-check
+      
+  test:
     runs-on: ubuntu-latest
     
     steps:
@@ -71,44 +97,3 @@ jobs:
         curl -f http://localhost:3000/books || exit 1
         curl -f http://localhost:3000/projects || exit 1
         curl -f http://localhost:3000/snippets || exit 1
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-files
-        path: |
-          peta/.next/
-          _build/
-        retention-days: 30
-
-  deploy-vercel:
-    if: github.ref == 'refs/heads/main'
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    environment: production
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: peta/package-lock.json
-        
-    - name: Install Vercel CLI
-      run: npm install --global vercel@latest
-      
-    - name: Pull Vercel Environment Information
-      working-directory: ./peta
-      run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-      
-    - name: Build Project Artifacts
-      working-directory: ./peta
-      run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-      
-    - name: Deploy Project Artifacts to Vercel
-      working-directory: ./peta
-      run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
