@@ -5,7 +5,7 @@ export default function Document() {
   // Note: We can't use async functions in _document.tsx
   // This will use static values that should match the defaults in site-config.ts
   const siteName = "Peta";
-  const siteDescription = "High-Performance Static Website Engine";
+  const siteDescription = "High-Performance Dynamic Content Engine";
   const siteUrl = "https://localhost:3000";
 
   return (

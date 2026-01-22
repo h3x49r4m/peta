@@ -17,7 +17,7 @@ export default async function handler(
       const defaultConfig = {
         site: {
           name: "Peta",
-          description: "High-Performance Static Website Engine",
+          description: "High-Performance Dynamic Content Engine",
           url: "https://localhost:3000",
           logo: null,
           favicon: null
