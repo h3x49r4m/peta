@@ -39,7 +39,7 @@ jobs:
       
     - name: Export static files
       working-directory: ./peta
-      run: npm run export
+      run: NODE_ENV=production npm run build
       
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
