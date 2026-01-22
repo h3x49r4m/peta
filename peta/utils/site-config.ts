@@ -39,22 +39,22 @@ export async function getSiteConfig(): Promise<SiteConfig> {
           name: "Peta",
           description: "High-Performance Static Website Engine",
           url: "https://localhost:3000",
-          logo: null,
-          favicon: null
+          logo: undefined,
+          favicon: undefined
         },
         author: {
           name: "Peta Team",
           email: "contact@example.com",
-          url: null
+          url: undefined
         },
         social: {
-          github: null,
-          linkedin: null,
-          x: null
+          github: undefined,
+          linkedin: undefined,
+          x: undefined
         },
         footer: {
           copyright: "© 2024 Peta. All rights reserved.",
-          customText: null
+          customText: undefined
         }
       };
     }
@@ -66,22 +66,22 @@ export async function getSiteConfig(): Promise<SiteConfig> {
         name: "Peta",
         description: "High-Performance Static Website Engine",
         url: "https://localhost:3000",
-        logo: null,
-        favicon: null
+        logo: undefined,
+        favicon: undefined
       },
       author: {
         name: "Peta Team",
         email: "contact@example.com",
-        url: null
+        url: undefined
       },
       social: {
-        github: null,
-        linkedin: null,
-        x: null
+        github: undefined,
+        linkedin: undefined,
+        x: undefined
       },
       footer: {
         copyright: "© 2024 Peta. All rights reserved.",
-        customText: null
+        customText: undefined
       }
     };
   }

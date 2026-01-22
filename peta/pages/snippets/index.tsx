@@ -13,6 +13,7 @@ interface Snippet {
   date: string;
   content: any[];
   tags: string[];
+  author?: string;
 }
 
 function SnippetsPage() {

@@ -16,6 +16,7 @@ interface Project {
   github_url?: string;
   demo_url?: string;
   content: any[];
+  author?: string;
 }
 
 function ProjectsPage() {

@@ -304,7 +304,7 @@ export default function BookTOC({ book, snippets = [], snippetsLoading = false, 
     book.sections.forEach(section => {
       if (section.content) {
         // Track the current header while scanning content
-        let currentHeader = null;
+        let currentHeader: { text: string; level: number; id: string } | null = null;
         
         section.content.forEach(item => {
           // Check if this is a header (text block that looks like a header)

@@ -9,11 +9,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import withFeatureCheck from '../../hocs/withFeatureCheck';
 
-export async function getServerSideProps(context: any) {
-  const { query } = context;
+export async function getStaticProps() {
+  // For static export, we can't pass query parameters
+  // The book selection will be handled client-side
   return {
     props: {
-      initialBookId: query.book || null,
+      initialBookId: null,
     },
   };
 }
@@ -79,7 +80,7 @@ function BooksPage({ initialBookId }: { initialBookId?: string }) {
     if (selectedBook && router.query.section) {
       const sectionId = router.query.section as string;
       // Find the section with this ID
-      const sectionIndex = selectedBook.sections.findIndex(s => s.id === sectionId);
+      const sectionIndex = selectedBook.sections?.findIndex(s => s.id === sectionId) ?? -1;
       if (sectionIndex !== -1) {
         setCurrentSectionId(sectionId);
         
@@ -100,7 +101,7 @@ function BooksPage({ initialBookId }: { initialBookId?: string }) {
           }, 500);
         }
       }
-    } else if (selectedBook && selectedBook.sections.length > 0) {
+    } else if (selectedBook && selectedBook.sections && selectedBook.sections.length > 0) {
       // Default to 'index' section if no section parameter
       setCurrentSectionId('index');
     }

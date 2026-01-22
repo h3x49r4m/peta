@@ -9,6 +9,7 @@ interface Project {
   date: string;
   github_url?: string;
   demo_url?: string;
+  author?: string;
 }
 
 interface ProjectGridProps {

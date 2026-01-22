@@ -9,6 +9,7 @@ interface Snippet {
   date: string;
   content: any[];
   tags: string[];
+  author?: string;
 }
 
 interface SnippetModalProps {

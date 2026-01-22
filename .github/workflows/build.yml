@@ -35,10 +35,6 @@ jobs:
       
     - name: Build site
       working-directory: ./peta
-      run: npm run build
-      
-    - name: Export static files
-      working-directory: ./peta
       run: NODE_ENV=production npm run build
       
     - name: Upload build artifacts

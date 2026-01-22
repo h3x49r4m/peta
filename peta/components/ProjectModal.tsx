@@ -12,6 +12,7 @@ interface Project {
   tags: string[];
   github_url?: string;
   demo_url?: string;
+  author?: string;
 }
 
 interface ProjectModalProps {

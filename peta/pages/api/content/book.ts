@@ -106,11 +106,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
           
           // Add any remaining sections not in toctree
-          for (const [sectionName, section] of sectionMap) {
+          Array.from(sectionMap.entries()).forEach(([sectionName, section]) => {
             if (sectionName !== 'index' && !toctreeSections.includes(sectionName)) {
               sections.push(section);
             }
-          }
+          });
           
           books.push({
             id: folder,

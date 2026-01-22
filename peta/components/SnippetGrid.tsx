@@ -7,6 +7,7 @@ interface Snippet {
   content: any[]; // Changed to array to match API response
   tags: string[];
   date: string;
+  author?: string;
 }
 
 interface SnippetGridProps {
